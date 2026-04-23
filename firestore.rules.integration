@@ -1,0 +1,13 @@
+// Permissive rules used ONLY during Layer-3 integration tests so the
+// test harness can seed fixtures without standing up an admin user
+// first. Real production rules live in ../firestore.rules and are
+// covered by the Layer-1 emulator suite (tool/firestore-tests).
+
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /{document=**} {
+      allow read, write: if true;
+    }
+  }
+}

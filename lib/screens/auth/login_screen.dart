@@ -96,6 +96,7 @@ class _LoginScreenState extends State<LoginScreen> {
                       _label('Email Address'),
                       const SizedBox(height: 8),
                       TextFormField(
+                        key: const Key('login-email'),
                         controller: _emailCtrl,
                         autofillHints: const [AutofillHints.email],
                         keyboardType: TextInputType.emailAddress,
@@ -117,6 +118,7 @@ class _LoginScreenState extends State<LoginScreen> {
                       _label('Password'),
                       const SizedBox(height: 8),
                       TextFormField(
+                        key: const Key('login-password'),
                         controller: _passwordCtrl,
                         obscureText: _obscurePassword,
                         textInputAction: TextInputAction.done,
@@ -154,6 +156,7 @@ class _LoginScreenState extends State<LoginScreen> {
                       ),
                       const SizedBox(height: 8),
                       FilledButton(
+                        key: const Key('login-submit'),
                         onPressed: _loading ? null : _submit,
                         child: _loading
                             ? const SizedBox(

@@ -46,6 +46,10 @@ dev_dependencies:
   # Pure-Dart fake Firestore for model/serde unit tests.
   fake_cloud_firestore: ^3.0.3
 
+  # Widget-driver for Layer 3 integration tests on a real device/emulator.
+  integration_test:
+    sdk: flutter
+
 flutter_native_splash:
   color: "#FFF8F7"
   color_dark: "#FFF8F7"

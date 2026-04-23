@@ -90,6 +90,7 @@ class ProfileScreen extends StatelessWidget {
               _personalInfo(user),
               const SizedBox(height: 28),
               OutlinedButton.icon(
+                key: const Key('profile-signout'),
                 onPressed: () => _signOut(context),
                 icon: const Icon(Icons.logout_rounded),
                 label: const Text('Sign Out'),
