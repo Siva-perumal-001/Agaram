@@ -6,57 +6,124 @@ import '../models/app_user.dart';
 
 class RoleChip extends StatelessWidget {
   final AppUser user;
-  const RoleChip({super.key, required this.user});
+  final bool compact;
+
+  const RoleChip({super.key, required this.user, this.compact = false});
 
   @override
   Widget build(BuildContext context) {
-    if (user.isPresident) {
-      return _chip(
-        label: 'President',
-        trailing: ' 👑',
-        bg: AgaramColors.primaryContainer,
-        fg: Colors.white,
-        border: null,
-      );
-    }
-    if (user.isAdmin) {
-      return _chip(
-        label: 'Admin',
-        bg: AgaramColors.secondaryContainer,
-        fg: AgaramColors.secondary,
-        border: null,
-      );
-    }
-    return _chip(
-      label: 'Member',
-      bg: Colors.transparent,
-      fg: AgaramColors.primary,
-      border: Border.all(color: AgaramColors.primary, width: 1.2),
-    );
-  }
-
-  Widget _chip({
-    required String label,
-    String trailing = '',
-    required Color bg,
-    required Color fg,
-    required BoxBorder? border,
-  }) {
+    final (label, bg, fg, border, trailing, icon) = _styles();
+    final padH = compact ? 10.0 : 16.0;
+    final padV = compact ? 4.0 : 8.0;
+    final fontSize = compact ? 11.0 : 13.0;
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      padding: EdgeInsets.symmetric(horizontal: padH, vertical: padV),
       decoration: BoxDecoration(
         color: bg,
         borderRadius: BorderRadius.circular(999),
         border: border,
       ),
-      child: Text(
-        '$label$trailing',
-        style: GoogleFonts.inter(
-          fontSize: 13,
-          fontWeight: FontWeight.w600,
-          color: fg,
-        ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          if (icon != null) ...[
+            Icon(icon, size: fontSize + 2, color: fg),
+            SizedBox(width: padH * 0.4),
+          ],
+          Text(
+            '$label$trailing',
+            style: GoogleFonts.inter(
+              fontSize: fontSize,
+              fontWeight: FontWeight.w600,
+              color: fg,
+            ),
+          ),
+        ],
       ),
+    );
+  }
+
+  (String, Color, Color, BoxBorder?, String, IconData?) _styles() {
+    final pos = user.position;
+    final effectivePresident = user.isPresident || pos == AppPosition.president;
+
+    if (effectivePresident) {
+      return (
+        'President',
+        AgaramColors.primaryContainer,
+        Colors.white,
+        null,
+        ' 👑',
+        null,
+      );
+    }
+    if (pos == AppPosition.vicePresident) {
+      return (
+        'Vice President',
+        AgaramColors.primary,
+        Colors.white,
+        null,
+        '',
+        Icons.star_rounded,
+      );
+    }
+    if (pos == AppPosition.secretary) {
+      return (
+        'Secretary',
+        AgaramColors.secondaryContainer,
+        AgaramColors.secondary,
+        null,
+        '',
+        Icons.edit_note_rounded,
+      );
+    }
+    if (pos == AppPosition.jointSecretary) {
+      return (
+        'Joint Secretary',
+        AgaramColors.secondaryContainer.withValues(alpha: 0.6),
+        AgaramColors.secondary,
+        null,
+        '',
+        Icons.edit_note_rounded,
+      );
+    }
+    if (pos == AppPosition.treasurer) {
+      return (
+        'Treasurer',
+        const Color(0xFFDDF2E3),
+        const Color(0xFF2E7D32),
+        null,
+        '',
+        Icons.account_balance_wallet_rounded,
+      );
+    }
+    if (pos == AppPosition.jointTreasurer) {
+      return (
+        'Joint Treasurer',
+        const Color(0xFFDDF2E3).withValues(alpha: 0.65),
+        const Color(0xFF2E7D32),
+        null,
+        '',
+        Icons.account_balance_wallet_rounded,
+      );
+    }
+    if (user.isAdmin) {
+      return (
+        'Admin',
+        AgaramColors.secondaryContainer,
+        AgaramColors.secondary,
+        null,
+        '',
+        Icons.shield_rounded,
+      );
+    }
+    return (
+      'Member',
+      Colors.transparent,
+      AgaramColors.primary,
+      Border.all(color: AgaramColors.primary, width: 1.2),
+      '',
+      null,
     );
   }
 }

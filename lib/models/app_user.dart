@@ -6,6 +6,8 @@ class AppUser {
   final String email;
   final String role;
   final bool isPresident;
+  final String? position;
+  final bool active;
   final int stars;
   final DateTime? joinedAt;
   final String? photoUrl;
@@ -18,6 +20,8 @@ class AppUser {
     required this.role,
     required this.isPresident,
     required this.stars,
+    this.position,
+    this.active = true,
     this.joinedAt,
     this.photoUrl,
     this.phone,
@@ -33,6 +37,8 @@ class AppUser {
       email: data['email'] as String? ?? '',
       role: data['role'] as String? ?? 'member',
       isPresident: data['isPresident'] as bool? ?? false,
+      position: data['position'] as String?,
+      active: data['active'] as bool? ?? true,
       stars: (data['stars'] as num?)?.toInt() ?? 0,
       joinedAt: (data['joinedAt'] as Timestamp?)?.toDate(),
       photoUrl: data['photoUrl'] as String?,
@@ -46,10 +52,54 @@ class AppUser {
       'email': email,
       'role': role,
       'isPresident': isPresident,
+      'active': active,
       'stars': stars,
-      'joinedAt': joinedAt == null ? FieldValue.serverTimestamp() : Timestamp.fromDate(joinedAt!),
+      'joinedAt': joinedAt == null
+          ? FieldValue.serverTimestamp()
+          : Timestamp.fromDate(joinedAt!),
+      if (position != null) 'position': position,
       if (photoUrl != null) 'photoUrl': photoUrl,
       if (phone != null) 'phone': phone,
     };
+  }
+}
+
+class AppPosition {
+  static const member = 'member';
+  static const secretary = 'secretary';
+  static const jointSecretary = 'joint_secretary';
+  static const treasurer = 'treasurer';
+  static const jointTreasurer = 'joint_treasurer';
+  static const vicePresident = 'vice_president';
+  static const president = 'president';
+
+  static const all = [
+    member,
+    secretary,
+    jointSecretary,
+    treasurer,
+    jointTreasurer,
+    vicePresident,
+    president,
+  ];
+
+  static String label(String? value) {
+    switch (value) {
+      case secretary:
+        return 'Secretary';
+      case jointSecretary:
+        return 'Joint Secretary';
+      case treasurer:
+        return 'Treasurer';
+      case jointTreasurer:
+        return 'Joint Treasurer';
+      case vicePresident:
+        return 'Vice President';
+      case president:
+        return 'President';
+      case member:
+      default:
+        return 'Member';
+    }
   }
 }
