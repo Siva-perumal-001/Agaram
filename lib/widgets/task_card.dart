@@ -9,6 +9,7 @@ import 'status_chip.dart';
 class TaskCard extends StatelessWidget {
   final AgaramTask task;
   final bool adminView;
+  final String? currentUid;
   final VoidCallback? onTap;
   final VoidCallback? onUploadProof;
 
@@ -16,9 +17,12 @@ class TaskCard extends StatelessWidget {
     super.key,
     required this.task,
     this.adminView = false,
+    this.currentUid,
     this.onTap,
     this.onUploadProof,
   });
+
+  bool get _isMine => currentUid != null && task.assignedTo == currentUid;
 
   @override
   Widget build(BuildContext context) {
@@ -76,10 +80,51 @@ class TaskCard extends StatelessWidget {
                 ),
               ),
             ],
-            const SizedBox(height: 14),
+            const SizedBox(height: 10),
+            _assigneeRow(),
+            const SizedBox(height: 12),
             _footer(context),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _assigneeRow() {
+    final name = task.assignedToName.isEmpty
+        ? 'unassigned'
+        : task.assignedToName;
+    final label = _isMine ? 'Assigned to you' : 'Assigned to $name';
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+      decoration: BoxDecoration(
+        color: _isMine
+            ? AgaramColors.secondaryContainer
+            : AgaramColors.surfaceContainerLow,
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(
+            Icons.person_outline_rounded,
+            size: 14,
+            color: _isMine
+                ? AgaramColors.secondary
+                : AgaramColors.onSurfaceVariant,
+          ),
+          const SizedBox(width: 6),
+          Text(
+            label,
+            style: GoogleFonts.inter(
+              fontSize: 11,
+              fontWeight: FontWeight.w600,
+              color: _isMine
+                  ? AgaramColors.secondary
+                  : AgaramColors.onSurfaceVariant,
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -118,7 +163,7 @@ class TaskCard extends StatelessWidget {
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Text(adminView ? 'Review' : 'View submission',
+              Text(adminView ? 'Review' : (_isMine ? 'View submission' : 'View'),
                   style: GoogleFonts.inter(
                     fontSize: 13,
                     fontWeight: FontWeight.w600,
@@ -154,7 +199,7 @@ class TaskCard extends StatelessWidget {
           ),
         ],
         const Spacer(),
-        if (!adminView && onUploadProof != null)
+        if (!adminView && _isMine && onUploadProof != null)
           TextButton(
             onPressed: onUploadProof,
             child: Text(

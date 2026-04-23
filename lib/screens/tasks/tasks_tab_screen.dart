@@ -70,6 +70,7 @@ class _MyTasks extends StatelessWidget {
                 final t = tasks[i];
                 return TaskCard(
                   task: t,
+                  currentUid: uid,
                   onTap: () => Navigator.of(context).push(
                     MaterialPageRoute(
                       builder: (_) => TaskDetailScreen(task: t),

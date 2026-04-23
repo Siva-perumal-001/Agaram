@@ -381,10 +381,9 @@ class _TasksSliver extends StatelessWidget {
     final isAdmin = context.watch<AuthService>().isAdmin;
     final uid = user?.uid;
 
-    Query<Map<String, dynamic>> query = EventService.tasks(eventId);
-    if (!isAdmin && uid != null) {
-      query = query.where('assignedTo', isEqualTo: uid);
-    }
+    // All members can now see every task in the event; only the assignee
+    // sees the "Upload proof" CTA (gated inside TaskCard).
+    final query = EventService.tasks(eventId);
 
     return StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
       stream: query.snapshots(),
@@ -413,13 +412,15 @@ class _TasksSliver extends StatelessWidget {
             separatorBuilder: (_, _) => const SizedBox(height: 12),
             itemBuilder: (_, i) {
               final task = AgaramTask.fromFirestore(docs[i]);
+              final isMine = uid != null && task.assignedTo == uid;
               return TaskCard(
                 task: task,
                 adminView: isAdmin,
-                onTap: () => _openTask(context, task, isAdmin),
-                onUploadProof: isAdmin
+                currentUid: uid,
+                onTap: () => _openTask(context, task, isAdmin, isMine),
+                onUploadProof: (isAdmin || !isMine)
                     ? null
-                    : () => _openTask(context, task, false),
+                    : () => _openTask(context, task, false, true),
               );
             },
           ),
@@ -428,14 +429,21 @@ class _TasksSliver extends StatelessWidget {
     );
   }
 
-  void _openTask(BuildContext context, AgaramTask task, bool admin) {
+  void _openTask(
+    BuildContext context,
+    AgaramTask task,
+    bool admin,
+    bool isMine,
+  ) {
     if (admin && task.status == TaskStatus.submitted) {
       Navigator.of(context).push(
         MaterialPageRoute(builder: (_) => TaskReviewScreen(task: task)),
       );
     } else {
       Navigator.of(context).push(
-        MaterialPageRoute(builder: (_) => TaskDetailScreen(task: task)),
+        MaterialPageRoute(
+          builder: (_) => TaskDetailScreen(task: task, viewOnly: !isMine && !admin),
+        ),
       );
     }
   }

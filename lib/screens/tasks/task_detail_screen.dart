@@ -16,7 +16,13 @@ import '../../widgets/status_chip.dart';
 
 class TaskDetailScreen extends StatefulWidget {
   final AgaramTask task;
-  const TaskDetailScreen({super.key, required this.task});
+
+  /// When true the viewer is neither the assignee nor an admin (another
+  /// member peeking at someone else's task). Hides the upload section and
+  /// shows the existing proof (if any) read-only.
+  final bool viewOnly;
+
+  const TaskDetailScreen({super.key, required this.task, this.viewOnly = false});
 
   @override
   State<TaskDetailScreen> createState() => _TaskDetailScreenState();
@@ -126,8 +132,9 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
   @override
   Widget build(BuildContext context) {
     final task = widget.task;
-    final canEdit = task.status == TaskStatus.pending ||
-        task.status == TaskStatus.rejected;
+    final canEdit = !widget.viewOnly &&
+        (task.status == TaskStatus.pending ||
+            task.status == TaskStatus.rejected);
 
     return Scaffold(
       appBar: AppBar(title: const Text('Task Detail')),
