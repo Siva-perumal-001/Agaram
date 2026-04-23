@@ -4,6 +4,7 @@ import 'package:google_fonts/google_fonts.dart';
 
 import '../../core/members_service.dart';
 import '../../core/theme.dart';
+import '../../models/app_user.dart';
 
 class AddMemberSheet extends StatefulWidget {
   const AddMemberSheet({super.key});
@@ -17,7 +18,11 @@ class _AddMemberSheetState extends State<AddMemberSheet> {
   final _name = TextEditingController();
   final _email = TextEditingController();
   final _phone = TextEditingController();
+  final _password = TextEditingController();
+
   String _role = 'member';
+  String? _position = AppPosition.member;
+  bool _obscure = true;
   bool _saving = false;
   MemberCreationResult? _result;
 
@@ -26,21 +31,28 @@ class _AddMemberSheetState extends State<AddMemberSheet> {
     _name.dispose();
     _email.dispose();
     _phone.dispose();
+    _password.dispose();
     super.dispose();
+  }
+
+  void _fillSuggested() {
+    setState(() {
+      _password.text = MembersService.suggestPassword();
+      _obscure = false;
+    });
   }
 
   Future<void> _save() async {
     if (!_formKey.currentState!.validate()) return;
     setState(() => _saving = true);
     try {
-      // Temporary: uses auto-generated password. Full redesign (admin-set
-       // password + position dropdown) is wired in the next Phase 7 commit.
       final result = await MembersService.createMember(
         name: _name.text.trim(),
         email: _email.text.trim(),
-        password: MembersService.suggestPassword(),
+        password: _password.text,
         phone: _phone.text.trim().isEmpty ? null : _phone.text.trim(),
         role: _role,
+        position: _position,
       );
       if (!mounted) return;
       setState(() {
@@ -86,7 +98,7 @@ class _AddMemberSheetState extends State<AddMemberSheet> {
           ),
           const SizedBox(height: 4),
           Text(
-            'Creates a Firebase Auth account. Share the generated password with them out-of-band.',
+            'Register a new enthusiast to the scholarly circle.',
             style: GoogleFonts.inter(
               fontSize: 13,
               color: AgaramColors.onSurfaceVariant,
@@ -97,17 +109,18 @@ class _AddMemberSheetState extends State<AddMemberSheet> {
           const SizedBox(height: 6),
           TextFormField(
             controller: _name,
-            decoration: const InputDecoration(hintText: 'e.g. Priya Dharshini'),
+            textCapitalization: TextCapitalization.words,
+            decoration: const InputDecoration(hintText: 'E.g. Elango Adigal'),
             validator: (v) =>
                 (v == null || v.trim().isEmpty) ? 'Name is required' : null,
           ),
           const SizedBox(height: 14),
-          _label('Email (used for sign in)'),
+          _label('Email address'),
           const SizedBox(height: 6),
           TextFormField(
             controller: _email,
             keyboardType: TextInputType.emailAddress,
-            decoration: const InputDecoration(hintText: 'name@college.edu'),
+            decoration: const InputDecoration(hintText: 'member@agaram.edu'),
             validator: (v) {
               final value = v?.trim() ?? '';
               if (value.isEmpty) return 'Email is required';
@@ -118,12 +131,97 @@ class _AddMemberSheetState extends State<AddMemberSheet> {
             },
           ),
           const SizedBox(height: 14),
-          _label('Phone (optional)'),
+          _label('Phone number (optional)'),
           const SizedBox(height: 6),
           TextFormField(
             controller: _phone,
             keyboardType: TextInputType.phone,
-            decoration: const InputDecoration(hintText: '+91 98765 43210'),
+            decoration: const InputDecoration(hintText: '+91 00000 00000'),
+          ),
+          const SizedBox(height: 14),
+          _label('Password (required)'),
+          const SizedBox(height: 6),
+          TextFormField(
+            controller: _password,
+            obscureText: _obscure,
+            decoration: InputDecoration(
+              hintText: 'Type a password they can use to sign in',
+              suffixIcon: IconButton(
+                onPressed: () => setState(() => _obscure = !_obscure),
+                icon: Icon(
+                  _obscure
+                      ? Icons.visibility_outlined
+                      : Icons.visibility_off_outlined,
+                  color: AgaramColors.onSurfaceVariant,
+                ),
+              ),
+            ),
+            validator: (v) {
+              if (v == null || v.isEmpty) return 'Password is required';
+              if (v.length < 6) return 'At least 6 characters';
+              return null;
+            },
+          ),
+          const SizedBox(height: 6),
+          Row(
+            children: [
+              Text(
+                'Min. 6 characters',
+                style: GoogleFonts.inter(
+                  fontSize: 12,
+                  fontStyle: FontStyle.italic,
+                  color: AgaramColors.onSurfaceVariant,
+                ),
+              ),
+              const Spacer(),
+              InkWell(
+                onTap: _fillSuggested,
+                borderRadius: BorderRadius.circular(8),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 6,
+                    vertical: 4,
+                  ),
+                  child: Text(
+                    'Suggest strong password',
+                    style: GoogleFonts.inter(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      color: AgaramColors.secondary,
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 6),
+          Text(
+            'Share this with them via WhatsApp/SMS after creating the account.',
+            style: GoogleFonts.inter(
+              fontSize: 11,
+              color: AgaramColors.onSurfaceVariant,
+              height: 1.4,
+            ),
+          ),
+          const SizedBox(height: 18),
+          _label('Position'),
+          const SizedBox(height: 6),
+          DropdownButtonFormField<String>(
+            initialValue: _position,
+            isExpanded: true,
+            items: [
+              const DropdownMenuItem(value: null, child: Text('None')),
+              ...AppPosition.all.map(
+                (p) => DropdownMenuItem(
+                  value: p,
+                  child: Text(AppPosition.label(p)),
+                ),
+              ),
+            ],
+            onChanged: (v) => setState(() => _position = v),
+            decoration: const InputDecoration(
+              hintText: 'Pick a position',
+            ),
           ),
           const SizedBox(height: 18),
           _label('Initial role'),
@@ -159,83 +257,104 @@ class _AddMemberSheetState extends State<AddMemberSheet> {
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Container(
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            color: const Color(0xFFDDF2E3),
-            borderRadius: BorderRadius.circular(16),
-          ),
-          child: Row(
-            children: [
-              const Icon(
-                Icons.check_circle_rounded,
-                color: Color(0xFF2E7D32),
-                size: 28,
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Text(
-                  'Account created for ${r.email}',
-                  style: GoogleFonts.inter(
-                    fontSize: 15,
-                    fontWeight: FontWeight.w700,
-                    color: const Color(0xFF1B5E20),
-                  ),
-                ),
-              ),
-            ],
+        const SizedBox(height: 16),
+        Center(
+          child: Container(
+            height: 84,
+            width: 84,
+            decoration: const BoxDecoration(
+              color: Color(0xFFDDF2E3),
+              shape: BoxShape.circle,
+            ),
+            child: const Icon(
+              Icons.person_add_alt_1_rounded,
+              size: 40,
+              color: Color(0xFF2E7D32),
+            ),
           ),
         ),
-        const SizedBox(height: 20),
+        const SizedBox(height: 18),
+        Center(
+          child: Text(
+            'Account Created',
+            style: GoogleFonts.inter(
+              fontSize: 22,
+              fontWeight: FontWeight.w700,
+              color: const Color(0xFF1B5E20),
+            ),
+          ),
+        ),
+        const SizedBox(height: 8),
         Text(
-          'Share this password with them — they’ll use it once and change it after signing in.',
+          'Account successfully created for ${_name.text.trim()}. '
+          'Share the password with them to let them sign in.',
+          textAlign: TextAlign.center,
           style: GoogleFonts.inter(
             fontSize: 13,
             color: AgaramColors.onSurfaceVariant,
             height: 1.5,
           ),
         ),
-        const SizedBox(height: 12),
+        const SizedBox(height: 18),
         Container(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+          padding: const EdgeInsets.all(14),
           decoration: BoxDecoration(
-            color: AgaramColors.surfaceContainerLow,
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: AgaramColors.outlineVariant),
+            color: const Color(0xFFDDF2E3),
+            borderRadius: BorderRadius.circular(14),
+            border: const Border(
+              left: BorderSide(color: Color(0xFF2E7D32), width: 3),
+            ),
           ),
-          child: Row(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Expanded(
-                child: SelectableText(
-                  r.password,
-                  style: GoogleFonts.jetBrainsMono(
-                    fontSize: 17,
-                    fontWeight: FontWeight.w600,
-                    color: AgaramColors.primary,
-                    letterSpacing: 1.5,
-                  ),
+              Text(
+                'Temporary Credentials',
+                style: GoogleFonts.inter(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w700,
+                  color: const Color(0xFF1B5E20),
                 ),
               ),
-              IconButton(
-                icon: const Icon(Icons.copy_rounded),
-                onPressed: () {
-                  Clipboard.setData(ClipboardData(text: r.password));
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Password copied')),
-                  );
-                },
+              const SizedBox(height: 8),
+              Row(
+                children: [
+                  Expanded(
+                    child: SelectableText(
+                      r.password,
+                      style: GoogleFonts.jetBrainsMono(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                        color: AgaramColors.primary,
+                        letterSpacing: 1.3,
+                      ),
+                    ),
+                  ),
+                  IconButton(
+                    icon: const Icon(
+                      Icons.copy_rounded,
+                      color: Color(0xFF2E7D32),
+                    ),
+                    onPressed: () {
+                      Clipboard.setData(ClipboardData(text: r.password));
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('Password copied')),
+                      );
+                    },
+                  ),
+                ],
               ),
             ],
           ),
         ),
         const SizedBox(height: 20),
-        ElevatedButton.icon(
-          onPressed: () {
-            Clipboard.setData(ClipboardData(text: r.password));
-            Navigator.of(context).pop();
-          },
-          icon: const Icon(Icons.check_rounded),
-          label: const Text('Copy password & close'),
+        ElevatedButton(
+          style: ElevatedButton.styleFrom(
+            backgroundColor: const Color(0xFF2E7D32),
+            foregroundColor: Colors.white,
+          ),
+          onPressed: () => Navigator.of(context).pop(),
+          child: const Text('Done'),
         ),
       ],
     );
@@ -246,7 +365,7 @@ class _AddMemberSheetState extends State<AddMemberSheet> {
         style: GoogleFonts.inter(
           fontSize: 13,
           fontWeight: FontWeight.w500,
-          color: AgaramColors.onSurface,
+          color: AgaramColors.onSurfaceVariant,
         ),
       );
 
@@ -263,15 +382,28 @@ class _AddMemberSheetState extends State<AddMemberSheet> {
               : AgaramColors.surfaceContainerLow,
           borderRadius: BorderRadius.circular(999),
         ),
-        child: Text(
-          label,
-          style: GoogleFonts.inter(
-            fontSize: 13,
-            fontWeight: FontWeight.w600,
-            color: selected
-                ? AgaramColors.secondary
-                : AgaramColors.onSurfaceVariant,
-          ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (selected) ...[
+              const Icon(
+                Icons.check_rounded,
+                size: 14,
+                color: AgaramColors.secondary,
+              ),
+              const SizedBox(width: 4),
+            ],
+            Text(
+              label,
+              style: GoogleFonts.inter(
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+                color: selected
+                    ? AgaramColors.secondary
+                    : AgaramColors.onSurfaceVariant,
+              ),
+            ),
+          ],
         ),
       ),
     );
