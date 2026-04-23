@@ -31,6 +31,23 @@ class CloudinaryService {
     );
   }
 
+  static Future<String> uploadAvatar(File file) {
+    return _upload(
+      file,
+      folder: '${AppConfig.cloudinaryFolderRoot}/avatars',
+      resourceType: CloudinaryResourceType.Image,
+    );
+  }
+
+  static Future<String> uploadWalletDoc(File file, {required bool isPdf}) {
+    return _upload(
+      file,
+      folder: '${AppConfig.cloudinaryFolderRoot}/wallet',
+      resourceType:
+          isPdf ? CloudinaryResourceType.Auto : CloudinaryResourceType.Image,
+    );
+  }
+
   static Future<String> _upload(
     File file, {
     required String folder,
