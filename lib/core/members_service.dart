@@ -69,17 +69,29 @@ class MembersService {
       );
       final uid = cred.user!.uid;
 
-      await _users.doc(uid).set({
-        'name': name.trim(),
-        'email': email.trim(),
-        'phone': phone?.trim(),
-        'role': role,
-        'isPresident': position == 'president',
-        'position': position,
-        'active': true,
-        'stars': 0,
-        'joinedAt': FieldValue.serverTimestamp(),
-      });
+      // If the Firestore write fails the Auth account must be rolled back,
+      // otherwise a retry hits 'email-already-in-use' and the member is
+      // stuck with an Auth record that has no profile.
+      try {
+        await _users.doc(uid).set({
+          'name': name.trim(),
+          'email': email.trim(),
+          'phone': phone?.trim(),
+          'role': role,
+          'isPresident': position == 'president',
+          'position': position,
+          'active': true,
+          'stars': 0,
+          'joinedAt': FieldValue.serverTimestamp(),
+        });
+      } catch (e) {
+        try {
+          await cred.user!.delete();
+        } catch (_) {
+          // If cleanup fails the admin retries manually via Firebase Console.
+        }
+        rethrow;
+      }
 
       await auth.signOut();
       return MemberCreationResult(
@@ -105,14 +117,33 @@ class MembersService {
 
   /// Mark the member deactivated + disable their Firebase Auth account so new
   /// sign-in attempts fail with `user-disabled`. Reversible via [reactivate].
+  ///
+  /// Order matters: toggle Identity Toolkit first so a mid-operation failure
+  /// leaves the admin UI consistent with actual sign-in behaviour. If
+  /// Identity Toolkit succeeds and Firestore then fails, the user is blocked
+  /// at Auth (safe) — the admin simply retries and the Firestore flag
+  /// catches up.
   static Future<void> deactivate(String uid) async {
-    await _users.doc(uid).update({'active': false});
     await _setAuthAccountDisabled(uid, disabled: true);
+    await _users.doc(uid).update({'active': false});
   }
 
   static Future<void> reactivate(String uid) async {
-    await _users.doc(uid).update({'active': true});
     await _setAuthAccountDisabled(uid, disabled: false);
+    await _users.doc(uid).update({'active': true});
+  }
+
+  /// Removes a member's Firestore profile. Spark has no admin-SDK client
+  /// delete, so we disable the Auth account instead — sign-in fails with
+  /// `user-disabled`, matching the UX of a real delete. Only the president
+  /// can call this (firestore.rules enforces the same).
+  ///
+  /// Always route deletes through here — never drop the doc from Firebase
+  /// Console, or the orphaned Auth account will keep hitting the
+  /// "not set up yet" branch in AuthService.
+  static Future<void> deleteMember(String uid) async {
+    await _setAuthAccountDisabled(uid, disabled: true);
+    await _users.doc(uid).delete();
   }
 
   static Future<void> _setAuthAccountDisabled(
