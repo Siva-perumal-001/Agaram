@@ -42,13 +42,14 @@ service cloud.firestore {
       // Only admins create user profiles (via the secondary-app flow).
       allow create: if isAdmin();
 
-      // Self can update own non-sensitive fields (name, phone, photoUrl,
-      // stars — stars grows via transactions on the user's own client).
-      // Admins can update any user's role, position, or active flag, but
-      // only the president can flip the isPresident marker.
+      // Self-update is an explicit allowlist — anything not listed
+      // (stars, email, role, isPresident, position, active, joinedAt)
+      // can only be changed by an admin or the president. Stars grow via
+      // admin-side transactions (approveTask + admin-marked attendance)
+      // so members never need to write to their own stars field.
       allow update: if isSignedIn() && (
         (request.auth.uid == uid
-          && notChanged(['role', 'isPresident', 'position', 'active']))
+          && onlyChanged(['name', 'phone', 'photoUrl', 'lastReadNotificationsAt']))
         || (isAdmin() && notChanged(['isPresident']))
         || isPresident()
       );
@@ -79,14 +80,16 @@ service cloud.firestore {
 
         // Admin can update anything. Members can only submit proof for their
         // own pending/rejected task — transitioning status to 'submitted'.
+        // Review metadata (reviewNote, reviewedBy, reviewedAt, starsAwarded)
+        // is off-limits; only admins can write those. The previous version's
+        // reviewNote on a rejected task stays visible until admin re-reviews.
         allow update: if isAdmin() || (
           resource.data.assignedTo == request.auth.uid
           && resource.data.status in ['pending', 'rejected']
           && request.resource.data.status == 'submitted'
           && onlyChanged([
               'proofUrl', 'proofType', 'memberNote',
-              'status', 'submittedAt',
-              'reviewNote', 'reviewedBy', 'reviewedAt'
+              'status', 'submittedAt'
           ])
         );
       }
@@ -94,9 +97,24 @@ service cloud.firestore {
       match /attendance/{memberUid} {
         allow read: if isSignedIn();
 
-        // Member can create own attendance; admin can create any.
-        allow create: if isSignedIn()
-          && (memberUid == request.auth.uid || isAdmin());
+        // Admin can create any attendance entry (manual marking).
+        // A member can self-check-in ONLY by presenting the current QR
+        // secret of the parent event — verified server-side by comparing
+        // request.resource.data.qrSecretUsed against events/{eventId}.qrSecret.
+        // Every other field must match the canonical shape so members
+        // can't forge userId, starsAwarded, or method.
+        allow create: if isSignedIn() && (
+          isAdmin()
+          || (
+            memberUid == request.auth.uid
+            && request.resource.data.userId == request.auth.uid
+            && request.resource.data.method == 'qr'
+            && request.resource.data.starsAwarded == 2
+            && request.resource.data.qrSecretUsed is string
+            && request.resource.data.qrSecretUsed ==
+                 get(/databases/$(database)/documents/events/$(eventId)).data.qrSecret
+          )
+        );
 
         // Only admin can modify or delete attendance entries.
         allow update, delete: if isAdmin();
@@ -104,7 +122,14 @@ service cloud.firestore {
 
       match /gallery/{photoId} {
         allow read: if isSignedIn();
-        allow create: if isSignedIn();
+        // Member may upload only if the stored fields can't spoof identity
+        // or point at an arbitrary URL: uploadedBy must equal their uid and
+        // the URL must come from our own Cloudinary cloud.
+        allow create: if isSignedIn()
+          && request.resource.data.uploadedBy == request.auth.uid
+          && request.resource.data.url is string
+          && request.resource.data.url.matches(
+              'https://res\\.cloudinary\\.com/dttox49ht/.*');
 
         // Uploader or any admin can update/delete their photo.
         allow update, delete: if isSignedIn() && (
@@ -114,7 +139,14 @@ service cloud.firestore {
 
       match /wallet/{docId} {
         allow read: if isSignedIn();
-        allow create: if isSignedIn();
+        // Same shape as gallery, plus pin the type enum so members can't
+        // mislabel an image as a pdf (or vice-versa) to confuse the counter.
+        allow create: if isSignedIn()
+          && request.resource.data.uploadedBy == request.auth.uid
+          && request.resource.data.type in ['pdf', 'image']
+          && request.resource.data.url is string
+          && request.resource.data.url.matches(
+              'https://res\\.cloudinary\\.com/dttox49ht/.*');
 
         // Uploader or any admin can update/delete.
         allow update, delete: if isSignedIn() && (
