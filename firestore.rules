@@ -1,0 +1,48 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    // Users: any signed-in member can read the roster; any signed-in user can
+    // write (the app restricts who calls which write). Rules get tightened in
+    // Phase 6 to enforce admin-only role/stars mutations.
+    match /users/{uid} {
+      allow read, write: if isSignedIn();
+    }
+
+    // Events and their subcollections.
+    match /events/{eventId} {
+      allow read, write: if isSignedIn();
+
+      match /tasks/{taskId} {
+        allow read, write: if isSignedIn();
+      }
+
+      match /attendance/{memberUid} {
+        allow read, write: if isSignedIn();
+      }
+
+      match /gallery/{photoId} {
+        allow read, write: if isSignedIn();
+      }
+    }
+
+    // Daily Kural overrides + monthly themes (admin-maintained content).
+    match /kurals/{date} {
+      allow read, write: if isSignedIn();
+    }
+
+    match /themes/{yearMonth} {
+      allow read, write: if isSignedIn();
+    }
+
+    // Notifications (built in Phase 5).
+    match /notifications/{notifId} {
+      allow read, write: if isSignedIn();
+    }
+  }
+}
