@@ -42,13 +42,13 @@ service cloud.firestore {
       // Only admins create user profiles (via the secondary-app flow).
       allow create: if isAdmin();
 
-      // Self can update own non-role fields (including stars, which grows via
-      // attendance/task approval transactions on the user's own client).
-      // Admins can update any user's role or other fields, but only the
-      // president can flip the isPresident flag.
+      // Self can update own non-sensitive fields (name, phone, photoUrl,
+      // stars — stars grows via transactions on the user's own client).
+      // Admins can update any user's role, position, or active flag, but
+      // only the president can flip the isPresident marker.
       allow update: if isSignedIn() && (
         (request.auth.uid == uid
-          && notChanged(['role', 'isPresident']))
+          && notChanged(['role', 'isPresident', 'position', 'active']))
         || (isAdmin() && notChanged(['isPresident']))
         || isPresident()
       );
@@ -99,6 +99,16 @@ service cloud.firestore {
         allow create: if isSignedIn();
 
         // Uploader or any admin can update/delete their photo.
+        allow update, delete: if isSignedIn() && (
+          resource.data.uploadedBy == request.auth.uid || isAdmin()
+        );
+      }
+
+      match /wallet/{docId} {
+        allow read: if isSignedIn();
+        allow create: if isSignedIn();
+
+        // Uploader or any admin can update/delete.
         allow update, delete: if isSignedIn() && (
           resource.data.uploadedBy == request.auth.uid || isAdmin()
         );
