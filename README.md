@@ -33,8 +33,8 @@ lib/
 ## Build phases
 
 - [x] **Phase 1** — Foundation & Auth (Splash, Login, Forgot Password)
-- [x] **Phase 2** — Home, Profile, Events list, Notifications, Kural of the Day, Monthly theme banner, bottom nav
-- [ ] **Phase 3** — Events & Tasks (CRUD, proof upload, review)
+- [x] **Phase 2** — Home, Profile, Events list, Kural of the Day, Monthly theme banner, bottom nav
+- [x] **Phase 3** — Events & Tasks: event CRUD, banner upload (Cloudinary), task assign + proof upload (image/PDF), admin review queue with approve/reject, auto-award stars on approval
 - [ ] **Phase 4** — Attendance (QR) + Event Gallery
 - [ ] **Phase 5** — Notifications, Members, Leaderboard
 - [ ] **Phase 6** — Polish & APK release
