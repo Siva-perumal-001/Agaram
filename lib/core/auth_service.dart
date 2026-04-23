@@ -17,13 +17,28 @@ class AuthService extends ChangeNotifier {
   AuthStatus _status = AuthStatus.unknown;
   AppUser? _currentUser;
   StreamSubscription<DocumentSnapshot<Map<String, dynamic>>>? _userSub;
+  StreamSubscription<User?>? _authSub;
+  bool _disposed = false;
 
   AuthStatus get status => _status;
   AppUser? get currentUser => _currentUser;
   bool get isAdmin => _currentUser?.isAdmin ?? false;
 
   AuthService() {
-    _auth.authStateChanges().listen(_handleAuthChange);
+    _authSub = _auth.authStateChanges().listen(_handleAuthChange);
+  }
+
+  @override
+  void dispose() {
+    _disposed = true;
+    _authSub?.cancel();
+    _userSub?.cancel();
+    super.dispose();
+  }
+
+  void _safeNotify() {
+    if (_disposed) return;
+    notifyListeners();
   }
 
   Future<void> _handleAuthChange(User? firebaseUser) async {
@@ -39,7 +54,7 @@ class AuthService extends ChangeNotifier {
         // topic unsubscribe is best-effort.
       }
       unawaited(ReminderService.cancelAll());
-      notifyListeners();
+      _safeNotify();
       return;
     }
     try {
@@ -59,7 +74,7 @@ class AuthService extends ChangeNotifier {
       _status = AuthStatus.unauthenticated;
       rethrow;
     } finally {
-      notifyListeners();
+      _safeNotify();
     }
   }
 
@@ -116,7 +131,7 @@ class AuthService extends ChangeNotifier {
         }
       }
       _currentUser = user;
-      notifyListeners();
+      _safeNotify();
     });
   }
 
