@@ -44,17 +44,25 @@ class NotificationsService {
   }
 
   static Stream<int> unreadCount(String uid) {
-    final userStream = _db.collection('users').doc(uid).snapshots();
-    return userStream.asyncMap((userSnap) async {
-      final lastRead =
-          (userSnap.data()?['lastReadNotificationsAt'] as Timestamp?)?.toDate();
+    // Only re-fetch the notification count when `lastReadNotificationsAt`
+    // actually moves — unrelated user-doc changes (stars, phone, photo)
+    // used to re-fire this query on every write and burn Firestore reads.
+    final lastReadStream = _db
+        .collection('users')
+        .doc(uid)
+        .snapshots()
+        .map((s) =>
+            (s.data()?['lastReadNotificationsAt'] as Timestamp?)?.toDate())
+        .distinct();
+    return lastReadStream.asyncMap((lastRead) async {
+      // Aggregate .count() costs 1 read regardless of how many notifications
+      // match — fixes the old bug where >50 unread capped the badge at 50
+      // and ascending-ordered the wrong page.
       final query = lastRead == null
-          ? _col.orderBy('sentAt', descending: true).limit(50)
-          : _col
-              .where('sentAt', isGreaterThan: Timestamp.fromDate(lastRead))
-              .limit(50);
-      final snap = await query.get();
-      return snap.docs.length;
+          ? _col
+          : _col.where('sentAt', isGreaterThan: Timestamp.fromDate(lastRead));
+      final agg = await query.count().get();
+      return agg.count ?? 0;
     });
   }
 }
