@@ -59,10 +59,15 @@ service cloud.firestore {
     }
 
     // --- Collection-group reads ----------------------------------------
-    // Required for `collectionGroup('tasks')` queries (Review Queue,
-    // My Tasks, admin stats). Writes stay governed by the nested rule
-    // under /events/{eventId}/tasks/{taskId}.
+    // Required for `collectionGroup('tasks')` queries (Review Queue, My
+    // Tasks, admin stats, profile 'Tasks approved' breakdown) and
+    // `collectionGroup('attendance')` queries (profile 'Events attended'
+    // breakdown, admin 'This month' stars roll-up). Writes stay governed
+    // by the nested rules under /events/{eventId}/{tasks|attendance}/...
     match /{path=**}/tasks/{taskId} {
+      allow read: if isSignedIn();
+    }
+    match /{path=**}/attendance/{memberUid} {
       allow read: if isSignedIn();
     }
 

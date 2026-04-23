@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 
+import '../../core/app_config.dart';
 import '../../core/auth_service.dart';
 import '../../core/notifications_service.dart';
 import '../../core/theme.dart';
@@ -295,13 +296,7 @@ class _StatsGrid extends StatelessWidget {
             showDot: total > 0,
           ),
         ),
-        StatTile(
-          icon: Icons.star_rounded,
-          iconColor: AgaramColors.secondary,
-          label: 'This month',
-          value: '+0',
-          goldValue: true,
-        ),
+        _thisMonthTile(firestore),
       ],
     );
   }
@@ -313,6 +308,44 @@ class _StatsGrid extends StatelessWidget {
     return StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
       stream: stream,
       builder: (_, snap) => builder(snap.data?.docs.length ?? 0),
+    );
+  }
+
+  Widget _thisMonthTile(FirebaseFirestore firestore) {
+    // First of the current month, device-local.
+    final now = DateTime.now();
+    final monthStart = Timestamp.fromDate(DateTime(now.year, now.month));
+
+    final tasksStream = firestore
+        .collectionGroup('tasks')
+        .where('status', isEqualTo: 'approved')
+        .where('reviewedAt', isGreaterThanOrEqualTo: monthStart)
+        .snapshots();
+    final attendanceStream = firestore
+        .collectionGroup('attendance')
+        .where('checkedInAt', isGreaterThanOrEqualTo: monthStart)
+        .snapshots();
+
+    return StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
+      stream: tasksStream,
+      builder: (_, taskSnap) {
+        final taskCount = taskSnap.data?.docs.length ?? 0;
+        return StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
+          stream: attendanceStream,
+          builder: (_, attSnap) {
+            final attCount = attSnap.data?.docs.length ?? 0;
+            final stars = taskCount * AppConfig.starsPerApprovedTask +
+                attCount * AppConfig.starsPerAttendance;
+            return StatTile(
+              icon: Icons.star_rounded,
+              iconColor: AgaramColors.secondary,
+              label: 'This month',
+              value: '+$stars',
+              goldValue: true,
+            );
+          },
+        );
+      },
     );
   }
 }

@@ -7,6 +7,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
 
+import '../../core/app_config.dart';
 import '../../core/auth_service.dart';
 import '../../core/cloudinary_service.dart';
 import '../../core/routes.dart';
@@ -386,7 +387,18 @@ class _StarsSummary extends StatelessWidget {
               const SizedBox(height: 14),
               Row(
                 children: [
-                  Expanded(child: _breakdown('Tasks', 'approved (+0)', '0')),
+                  Expanded(
+                    child: _LiveCountBreakdown(
+                      stream: FirebaseFirestore.instance
+                          .collectionGroup('tasks')
+                          .where('assignedTo', isEqualTo: user.uid)
+                          .where('status', isEqualTo: 'approved')
+                          .snapshots(),
+                      label: 'Tasks',
+                      subLabel: (n) =>
+                          'approved (+${n * AppConfig.starsPerApprovedTask})',
+                    ),
+                  ),
                   const SizedBox(
                     height: 40,
                     child: VerticalDivider(
@@ -394,7 +406,17 @@ class _StarsSummary extends StatelessWidget {
                       thickness: 0.8,
                     ),
                   ),
-                  Expanded(child: _breakdown('Events', 'attended (+0)', '0')),
+                  Expanded(
+                    child: _LiveCountBreakdown(
+                      stream: FirebaseFirestore.instance
+                          .collectionGroup('attendance')
+                          .where('userId', isEqualTo: user.uid)
+                          .snapshots(),
+                      label: 'Events',
+                      subLabel: (n) =>
+                          'attended (+${n * AppConfig.starsPerAttendance})',
+                    ),
+                  ),
                 ],
               ),
             ],
@@ -404,27 +426,47 @@ class _StarsSummary extends StatelessWidget {
     );
   }
 
-  Widget _breakdown(String big, String sub, String count) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          '$count $big',
-          style: GoogleFonts.inter(
-            fontSize: 18,
-            fontWeight: FontWeight.w700,
-            color: AgaramColors.onSurface,
-          ),
-        ),
-        const SizedBox(height: 2),
-        Text(
-          sub,
-          style: GoogleFonts.inter(
-            fontSize: 12,
-            color: AgaramColors.onSurfaceVariant,
-          ),
-        ),
-      ],
+}
+
+class _LiveCountBreakdown extends StatelessWidget {
+  final Stream<QuerySnapshot<Map<String, dynamic>>> stream;
+  final String label;
+  final String Function(int count) subLabel;
+
+  const _LiveCountBreakdown({
+    required this.stream,
+    required this.label,
+    required this.subLabel,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
+      stream: stream,
+      builder: (_, snap) {
+        final count = snap.data?.docs.length ?? 0;
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              '$count $label',
+              style: GoogleFonts.inter(
+                fontSize: 18,
+                fontWeight: FontWeight.w700,
+                color: AgaramColors.onSurface,
+              ),
+            ),
+            const SizedBox(height: 2),
+            Text(
+              subLabel(count),
+              style: GoogleFonts.inter(
+                fontSize: 12,
+                color: AgaramColors.onSurfaceVariant,
+              ),
+            ),
+          ],
+        );
+      },
     );
   }
 }
