@@ -9,6 +9,7 @@ import '../home/admin_dashboard_screen.dart';
 import '../home/member_home_screen.dart';
 import '../profile/profile_screen.dart';
 import '../tasks/tasks_tab_screen.dart';
+import '../wallet/wallet_screen.dart';
 
 class HomeShell extends StatefulWidget {
   const HomeShell({super.key});
@@ -20,14 +21,22 @@ class HomeShell extends StatefulWidget {
 class _HomeShellState extends State<HomeShell> {
   int _index = 0;
 
+  void switchTab(int idx) {
+    if (idx < 0 || idx > 4) return;
+    setState(() => _index = idx);
+  }
+
   @override
   Widget build(BuildContext context) {
     final isAdmin = context.watch<AuthService>().isAdmin;
 
     final pages = <Widget>[
-      isAdmin ? const AdminDashboardScreen() : const MemberHomeScreen(),
+      isAdmin
+          ? AdminDashboardScreen(onSwitchTab: switchTab)
+          : const MemberHomeScreen(),
       const EventsListScreen(),
       const TasksTabScreen(),
+      const WalletScreen(),
       const ProfileScreen(),
     ];
 
@@ -48,14 +57,15 @@ class _HomeShellState extends State<HomeShell> {
       child: SafeArea(
         top: false,
         child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 10),
           child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceAround,
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               _navItem(0, Icons.home_rounded, 'Home'),
               _navItem(1, Icons.calendar_month_rounded, 'Events'),
               _navItem(2, Icons.check_circle_outline_rounded, 'Tasks'),
-              _navItem(3, Icons.person_rounded, 'Profile'),
+              _navItem(3, Icons.folder_copy_rounded, 'Wallet'),
+              _navItem(4, Icons.person_rounded, 'Profile'),
             ],
           ),
         ),
@@ -65,39 +75,44 @@ class _HomeShellState extends State<HomeShell> {
 
   Widget _navItem(int idx, IconData icon, String label) {
     final selected = _index == idx;
-    return InkWell(
-      onTap: () => setState(() => _index = idx),
-      borderRadius: BorderRadius.circular(999),
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 200),
-        padding: EdgeInsets.symmetric(
-          horizontal: selected ? 18 : 12,
-          vertical: 10,
-        ),
-        decoration: BoxDecoration(
-          color: selected ? AgaramColors.primaryContainer : Colors.transparent,
-          borderRadius: BorderRadius.circular(999),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(
-              icon,
-              size: 22,
-              color: selected ? Colors.white : AgaramColors.onSurfaceVariant,
-            ),
-            if (selected) ...[
-              const SizedBox(width: 8),
-              Text(
-                label,
-                style: GoogleFonts.inter(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w600,
-                  color: Colors.white,
-                ),
+    return Flexible(
+      child: InkWell(
+        onTap: () => setState(() => _index = idx),
+        borderRadius: BorderRadius.circular(999),
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 200),
+          padding: EdgeInsets.symmetric(
+            horizontal: selected ? 14 : 10,
+            vertical: 10,
+          ),
+          decoration: BoxDecoration(
+            color: selected ? AgaramColors.primaryContainer : Colors.transparent,
+            borderRadius: BorderRadius.circular(999),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                icon,
+                size: 22,
+                color: selected ? Colors.white : AgaramColors.onSurfaceVariant,
               ),
+              if (selected) ...[
+                const SizedBox(width: 6),
+                Flexible(
+                  child: Text(
+                    label,
+                    overflow: TextOverflow.ellipsis,
+                    style: GoogleFonts.inter(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.white,
+                    ),
+                  ),
+                ),
+              ],
             ],
-          ],
+          ),
         ),
       ),
     );

@@ -11,12 +11,14 @@ import '../../widgets/activity_item.dart';
 import '../../widgets/agaram_logo.dart';
 import '../../widgets/quick_action_card.dart';
 import '../../widgets/stat_tile.dart';
+import '../events/event_form_screen.dart';
 import '../leaderboard/leaderboard_screen.dart';
 import '../members/members_list_screen.dart';
 import '../notifications/notifications_inbox_screen.dart';
 
 class AdminDashboardScreen extends StatelessWidget {
-  const AdminDashboardScreen({super.key});
+  final void Function(int tabIndex)? onSwitchTab;
+  const AdminDashboardScreen({super.key, this.onSwitchTab});
 
   @override
   Widget build(BuildContext context) {
@@ -47,17 +49,19 @@ class AdminDashboardScreen extends StatelessWidget {
                     child: QuickActionCard(
                       icon: Icons.add_rounded,
                       label: 'Create Event',
-                      onTap: () {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text('Create Event comes in Phase 3'),
-                          ),
-                        );
-                      },
+                      onTap: () => Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (_) => const EventFormScreen(),
+                        ),
+                      ),
                     ),
                   ),
                   const SizedBox(width: 12),
-                  const Expanded(child: _ReviewTasksAction()),
+                  Expanded(
+                    child: _ReviewTasksAction(
+                      onOpen: () => onSwitchTab?.call(2),
+                    ),
+                  ),
                 ],
               ),
               const SizedBox(height: 24),
@@ -302,7 +306,8 @@ class _StatsGrid extends StatelessWidget {
 }
 
 class _ReviewTasksAction extends StatelessWidget {
-  const _ReviewTasksAction();
+  final VoidCallback onOpen;
+  const _ReviewTasksAction({required this.onOpen});
 
   @override
   Widget build(BuildContext context) {
@@ -319,13 +324,7 @@ class _ReviewTasksAction extends StatelessWidget {
           label: 'Review Tasks',
           filled: false,
           badge: count > 0 ? '$count pending' : null,
-          onTap: () {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text('Review queue comes in Phase 3'),
-              ),
-            );
-          },
+          onTap: onOpen,
         );
       },
     );
