@@ -7,8 +7,8 @@ import '../../core/theme.dart';
 import '../events/events_list_screen.dart';
 import '../home/admin_dashboard_screen.dart';
 import '../home/member_home_screen.dart';
-import '../notifications/notifications_screen.dart';
 import '../profile/profile_screen.dart';
+import '../tasks/tasks_tab_screen.dart';
 
 class HomeShell extends StatefulWidget {
   const HomeShell({super.key});
@@ -27,7 +27,7 @@ class _HomeShellState extends State<HomeShell> {
     final pages = <Widget>[
       isAdmin ? const AdminDashboardScreen() : const MemberHomeScreen(),
       const EventsListScreen(),
-      const NotificationsScreen(),
+      const TasksTabScreen(),
       const ProfileScreen(),
     ];
 
@@ -54,7 +54,7 @@ class _HomeShellState extends State<HomeShell> {
             children: [
               _navItem(0, Icons.home_rounded, 'Home'),
               _navItem(1, Icons.calendar_month_rounded, 'Events'),
-              _navItem(2, Icons.notifications_rounded, 'Notifications'),
+              _navItem(2, Icons.check_circle_outline_rounded, 'Tasks'),
               _navItem(3, Icons.person_rounded, 'Profile'),
             ],
           ),

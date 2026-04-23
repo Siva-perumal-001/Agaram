@@ -6,6 +6,8 @@ import 'package:provider/provider.dart';
 import '../../core/auth_service.dart';
 import '../../core/theme.dart';
 import '../../widgets/event_preview_card.dart';
+import 'event_detail_screen.dart';
+import 'event_form_screen.dart';
 
 enum _Tab { upcoming, ongoing, past }
 
@@ -50,13 +52,11 @@ class _EventsListScreenState extends State<EventsListScreen> {
           ? FloatingActionButton.extended(
               backgroundColor: AgaramColors.secondary,
               foregroundColor: Colors.white,
-              onPressed: () {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('Create Event comes in Phase 3'),
-                  ),
-                );
-              },
+              onPressed: () => Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (_) => const EventFormScreen(),
+                ),
+              ),
               icon: const Icon(Icons.add_rounded),
               label: const Text('Create Event'),
             )
@@ -147,12 +147,18 @@ class _EventsListScreenState extends State<EventsListScreen> {
             final d = docs[i].data();
             final ts = d['date'];
             final date = ts is Timestamp ? ts.toDate() : DateTime.now();
+            final eventId = docs[i].id;
             return EventPreviewCard(
               title: (d['title'] as String?) ?? 'Untitled event',
               venue: (d['venue'] as String?) ?? 'TBA',
               date: date,
               tasksCount: (d['tasksCount'] as num?)?.toInt() ?? 0,
               bannerUrl: d['bannerUrl'] as String?,
+              onTap: () => Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (_) => EventDetailScreen(eventId: eventId),
+                ),
+              ),
             );
           },
         );
