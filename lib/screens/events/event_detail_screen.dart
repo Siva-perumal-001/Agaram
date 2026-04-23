@@ -200,10 +200,6 @@ class _EventHero extends StatelessWidget {
               );
             },
           ),
-        const IconButton(
-          icon: Icon(Icons.share_rounded, color: Colors.white),
-          onPressed: null,
-        ),
       ],
       flexibleSpace: FlexibleSpaceBar(
         background: Stack(

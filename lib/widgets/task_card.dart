@@ -45,17 +45,9 @@ class TaskCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                StatusChip(status: task.status),
-                const Spacer(),
-                Icon(
-                  Icons.more_vert_rounded,
-                  size: 20,
-                  color: AgaramColors.onSurfaceVariant,
-                ),
-              ],
+            Align(
+              alignment: Alignment.centerLeft,
+              child: StatusChip(status: task.status),
             ),
             const SizedBox(height: 12),
             Text(
