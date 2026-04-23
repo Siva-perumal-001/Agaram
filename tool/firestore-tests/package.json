@@ -1,0 +1,15 @@
+{
+  "name": "agaram-firestore-tests",
+  "private": true,
+  "version": "0.0.0",
+  "description": "Firestore security-rules unit tests for Agaram. Run via: npm test",
+  "type": "module",
+  "scripts": {
+    "test": "firebase --project=agaram-test emulators:exec --only firestore \"vitest run --reporter=verbose\""
+  },
+  "devDependencies": {
+    "@firebase/rules-unit-testing": "^4.0.1",
+    "firebase": "^11.0.0",
+    "vitest": "^2.1.9"
+  }
+}

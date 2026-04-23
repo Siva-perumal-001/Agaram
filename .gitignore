@@ -51,3 +51,4 @@ lib/core/app_secrets.dart
 android/key.properties
 android/app/*.keystore
 android/app/*.jks
+tool/firestore-tests/node_modules/
