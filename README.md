@@ -36,7 +36,7 @@ lib/
 - [x] **Phase 2** — Home, Profile, Events list, Kural of the Day, Monthly theme banner, bottom nav
 - [x] **Phase 3** — Events & Tasks: event CRUD, banner upload (Cloudinary), task assign + proof upload (image/PDF), admin review queue with approve/reject, auto-award stars on approval
 - [x] **Phase 4** — Attendance via rotating QR (admin shows, member scans, +2 stars tx) + Event gallery grid + photo lightbox + admin manual mark
-- [ ] **Phase 5** — Notifications, Members, Leaderboard
-- [ ] **Phase 6** — Polish & APK release
+- [x] **Phase 5** — Notifications inbox + compose (FCM topics via bundled SA) + Members list + Add Member (secondary Firebase app) + promote/demote + Leaderboard with podium
+- [x] **Phase 6** — Production Firestore rules, app launcher icon, native cream splash, release APK built
 
 Full plan: `/Users/apple/.claude/plans/tamil-club-app-replicated-hedgehog.md`
