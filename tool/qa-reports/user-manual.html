@@ -1,0 +1,545 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Agaram — User Manual</title>
+<style>
+  :root{
+    --bg:#fff8f7; --panel:#ffffff; --ink:#1f1915; --muted:#6a5f57;
+    --brand:#b8531b; --brand-ink:#fff;
+    --accent:#f6a800; --ok:#3ecf8e; --warn:#f0b429; --bad:#ef4444;
+    --border:#ecd8cc; --code:#f7efe8;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0;background:var(--bg);color:var(--ink);
+    font:16px/1.7 -apple-system,BlinkMacSystemFont,"Segoe UI",Inter,Roboto,sans-serif}
+  a{color:var(--brand);text-decoration:none;border-bottom:1px solid rgba(184,83,27,.3)}
+  header{
+    background:linear-gradient(135deg,#b8531b 0%,#8b3c12 100%);
+    color:#fff; padding:48px 36px 36px;
+  }
+  header h1{margin:0 0 8px;font-size:34px;font-weight:800;letter-spacing:-.3px}
+  header .sub{font-size:15px;opacity:.92}
+  header .badge{
+    display:inline-block;background:rgba(255,255,255,.2);
+    padding:4px 12px;border-radius:999px;font-size:12px;letter-spacing:2px;
+    text-transform:uppercase;font-weight:700;margin-bottom:12px;
+  }
+  .wrap{max-width:860px;margin:0 auto;padding:32px 36px 120px}
+  nav.toc{
+    background:#fff;border:1px solid var(--border);border-radius:14px;
+    padding:20px 26px;margin:0 0 36px;
+  }
+  nav.toc h3{margin:0 0 10px;font-size:13px;letter-spacing:2px;
+    text-transform:uppercase;color:var(--muted)}
+  nav.toc ol{margin:0;padding-left:22px}
+  nav.toc li{padding:4px 0}
+  nav.toc a{border:none;font-weight:500}
+  h2{
+    font-size:26px;margin:44px 0 14px;padding-bottom:8px;
+    border-bottom:2px solid var(--brand);
+    scroll-margin-top:16px;
+  }
+  h2 .role{
+    display:inline-block;background:var(--brand);color:#fff;
+    padding:3px 12px;border-radius:999px;font-size:12px;
+    letter-spacing:1.5px;text-transform:uppercase;font-weight:700;
+    vertical-align:middle;margin-left:10px;
+  }
+  h2 .role.admin{background:#2b6cb0}
+  h2 .role.president{background:#6a1b9a}
+  h3{font-size:19px;margin:28px 0 10px;color:var(--ink)}
+  h4{font-size:15px;margin:18px 0 8px;color:var(--brand);
+    text-transform:uppercase;letter-spacing:1.2px;font-weight:700}
+  p,li{color:var(--ink)}
+  ol,ul{padding-left:26px}
+  ol li,ul li{margin:6px 0}
+  code{background:var(--code);padding:2px 8px;border-radius:5px;font-size:14px;color:#8b3c12}
+  .step{
+    background:#fff;border:1px solid var(--border);border-left:4px solid var(--brand);
+    border-radius:10px;padding:16px 22px;margin:12px 0;
+  }
+  .step .n{
+    display:inline-block;background:var(--brand);color:#fff;width:28px;height:28px;
+    border-radius:50%;text-align:center;line-height:28px;font-weight:700;font-size:14px;
+    margin-right:10px;vertical-align:middle;
+  }
+  .step h4{margin-top:0;color:var(--ink);text-transform:none;letter-spacing:0;font-size:16px;display:inline-block}
+  .tip{
+    background:#fff8e1;border:1px solid #f0d68c;border-left:4px solid var(--accent);
+    border-radius:10px;padding:14px 20px;margin:16px 0;
+  }
+  .tip strong{color:#8b5a00}
+  .warn{
+    background:#fde8e8;border:1px solid #f5a9a9;border-left:4px solid var(--bad);
+    border-radius:10px;padding:14px 20px;margin:16px 0;
+  }
+  .warn strong{color:#a01616}
+  .cant{
+    background:#f5f2ef;border:1px solid var(--border);
+    border-radius:10px;padding:14px 20px;margin:16px 0;
+  }
+  .cant strong{color:var(--muted);font-size:12px;letter-spacing:1.5px;text-transform:uppercase}
+  .cant ul{margin:6px 0 0}
+  table{width:100%;border-collapse:collapse;margin:14px 0;background:#fff;
+    border:1px solid var(--border);border-radius:10px;overflow:hidden}
+  th,td{text-align:left;padding:12px 16px;border-bottom:1px solid var(--border);vertical-align:top}
+  th{background:#fcebe0;color:var(--brand);font-weight:700;font-size:13px;
+    letter-spacing:1px;text-transform:uppercase}
+  tr:last-child td{border-bottom:none}
+  .pill{display:inline-block;padding:2px 10px;border-radius:999px;
+    font-size:11px;font-weight:700;letter-spacing:.5px;text-transform:uppercase}
+  .pill.can{background:#dcf5e8;color:#1f6e43}
+  .pill.cant-pill{background:#f5dcdc;color:#8b2b2b}
+  .stars{color:var(--accent);font-weight:700}
+  .kbd{background:#fff;border:1px solid var(--border);border-radius:6px;padding:2px 8px;
+    font-family:ui-monospace,monospace;font-size:13px}
+  hr{border:none;border-top:1px solid var(--border);margin:32px 0}
+  footer{color:var(--muted);font-size:13px;margin-top:48px;border-top:1px solid var(--border);
+    padding-top:16px;text-align:center}
+  .role-card{
+    background:#fff;border:1px solid var(--border);border-radius:12px;
+    padding:20px 24px;margin:14px 0;
+  }
+  .role-card h3{margin-top:0;display:flex;align-items:center;gap:10px}
+  .icon-circle{
+    display:inline-flex;align-items:center;justify-content:center;
+    width:36px;height:36px;border-radius:50%;color:#fff;font-size:18px;font-weight:700;
+  }
+  .icon-circle.m{background:#3ecf8e}
+  .icon-circle.a{background:#2b6cb0}
+  .icon-circle.p{background:#6a1b9a}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="badge">User Manual</div>
+  <h1>Agaram — How to use the app</h1>
+  <div class="sub">
+    Tamil Ilakiya Mandram · Simple step-by-step guide for every role
+  </div>
+</header>
+
+<div class="wrap">
+
+<!-- ============ TOC ============ -->
+<nav class="toc">
+  <h3>What's inside</h3>
+  <ol>
+    <li><a href="#everyone">For everyone — First sign in</a></li>
+    <li><a href="#member">If you are a Member</a></li>
+    <li><a href="#admin">If you are an Admin</a></li>
+    <li><a href="#president">If you are the President</a></li>
+    <li><a href="#stars">How to earn stars</a></li>
+    <li><a href="#faq">Questions &amp; problems</a></li>
+  </ol>
+</nav>
+
+<!-- ============ ROLE AT A GLANCE ============ -->
+<h2>Who does what — at a glance</h2>
+
+<div class="role-card">
+  <h3><span class="icon-circle m">M</span> Member — the everyday club user</h3>
+  <p>This is most people. You join events, complete tasks given to you, and take part in the club. You can't create events or change other members' accounts.</p>
+</div>
+
+<div class="role-card">
+  <h3><span class="icon-circle a">A</span> Admin — the organizer (secretaries, treasurers, office bearers)</h3>
+  <p>You do everything a Member does, PLUS you create events, assign tasks, approve work, mark attendance, and send announcements. You can add new members to the club.</p>
+</div>
+
+<div class="role-card">
+  <h3><span class="icon-circle p">P</span> President — the top authority</h3>
+  <p>You do everything an Admin does, PLUS you can remove members from the club and promote/demote the office bearers.</p>
+</div>
+
+<hr>
+
+<!-- ============ EVERYONE ============ -->
+<h2 id="everyone">1. For everyone — First sign in</h2>
+
+<p>Before you do anything, you need an account. Your club admin creates it for you and shares your email and a first-time password.</p>
+
+<div class="step">
+  <span class="n">1</span> <h4>Open the app.</h4>
+  <p>You'll see the Agaram logo and "Tamil Ilakiya Mandram" — this is the splash screen. It takes 2 seconds.</p>
+</div>
+
+<div class="step">
+  <span class="n">2</span> <h4>Sign in with the email and password your admin gave you.</h4>
+  <p>Type your email (e.g. <code>you@college.edu</code>) and the password. Tap <strong>Sign In</strong>.</p>
+</div>
+
+<div class="step">
+  <span class="n">3</span> <h4>(Optional) Change your password later.</h4>
+  <p>On the sign-in screen, tap <strong>Forgot password?</strong> You'll get an email with a reset link.</p>
+</div>
+
+<div class="tip">
+  <strong>Tip:</strong> The first time you sign in, Android may ask permission to send you notifications. Tap <strong>Allow</strong> so you get event and task alerts.
+</div>
+
+<div class="warn">
+  <strong>If it says "Email or password is incorrect"</strong> — check you typed the email exactly as the admin gave it. Passwords are case-sensitive.
+</div>
+
+<hr>
+
+<!-- ============ MEMBER ============ -->
+<h2 id="member">2. If you are a Member <span class="role">Member</span></h2>
+
+<p>You see 5 tabs at the bottom of the screen:</p>
+
+<table>
+  <tr><th>Icon</th><th>Tab</th><th>What you do there</th></tr>
+  <tr><td>🏠</td><td><strong>Home</strong></td><td>Today's Kural, this month's theme, upcoming events, your star count.</td></tr>
+  <tr><td>📅</td><td><strong>Events</strong></td><td>All club events — upcoming, ongoing, past.</td></tr>
+  <tr><td>✅</td><td><strong>Tasks</strong></td><td>Jobs assigned to you by admin. Upload proof when done.</td></tr>
+  <tr><td>📁</td><td><strong>Wallet</strong></td><td>Event receipts, bills, financial documents.</td></tr>
+  <tr><td>👤</td><td><strong>Profile</strong></td><td>Your photo, name, phone. Sign out button.</td></tr>
+</table>
+
+<h3>A. View events and check in</h3>
+
+<div class="step">
+  <span class="n">1</span> <h4>Go to the <strong>Events</strong> tab.</h4>
+  <p>Tap an event you're attending. You'll see its details, venue, time, and tabs for Attendance / Tasks / Gallery / Wallet.</p>
+</div>
+
+<div class="step">
+  <span class="n">2</span> <h4>On the day of the event, tap "Check in".</h4>
+  <p>This opens the QR scanner. Point your phone's camera at the QR code the admin shows on their screen.</p>
+</div>
+
+<div class="step">
+  <span class="n">3</span> <h4>You're marked present. <span class="stars">+2 stars</span>.</h4>
+  <p>You'll see a success message. Your name appears in the event's Attendance list.</p>
+</div>
+
+<div class="tip">
+  <strong>Check-in window:</strong> You can scan the QR starting 3 hours before the event begins, until the event ends. Outside this time, it says "Check-in closed."
+</div>
+
+<h3>B. Complete a task</h3>
+
+<div class="step">
+  <span class="n">1</span> <h4>Go to the <strong>Tasks</strong> tab.</h4>
+  <p>You see all jobs assigned to you — <strong>Pending</strong> (not done yet), <strong>Submitted</strong> (waiting for admin review), <strong>Approved</strong> (done, stars earned), <strong>Rejected</strong> (admin asks you to redo it).</p>
+</div>
+
+<div class="step">
+  <span class="n">2</span> <h4>Tap a pending task to open it.</h4>
+  <p>Read the details. Do the work in real life (bring the banner, arrange chairs, etc.).</p>
+</div>
+
+<div class="step">
+  <span class="n">3</span> <h4>Tap "Upload proof" and choose a photo or PDF.</h4>
+  <p>Take a picture of the completed work, or upload a document. Add a short note if you like.</p>
+</div>
+
+<div class="step">
+  <span class="n">4</span> <h4>Tap Submit. Wait for admin to approve.</h4>
+  <p>When approved, you get <span class="stars">+3 stars</span> and a notification. If rejected, you'll see the admin's reason — fix it and submit again.</p>
+</div>
+
+<div class="warn">
+  <strong>File limits:</strong> Proofs must be under <strong>10 MB</strong>. If your photo is too big, the app will tell you before uploading.
+</div>
+
+<h3>C. Upload event photos (Gallery)</h3>
+
+<div class="step">
+  <span class="n">1</span> <h4>Open the event → <strong>Gallery</strong> tab.</h4>
+  <p>Tap the camera icon in the corner.</p>
+</div>
+
+<div class="step">
+  <span class="n">2</span> <h4>Pick a photo from your phone.</h4>
+  <p>Add a caption (optional). Tap Upload.</p>
+</div>
+
+<div class="tip">
+  <strong>You can delete only photos you uploaded yourself.</strong> Admin can delete any photo.
+</div>
+
+<h3>D. Upload wallet documents (receipts, bills)</h3>
+
+<div class="step">
+  <span class="n">1</span> <h4>Open the event → <strong>Wallet</strong> tab.</h4>
+  <p>Tap the upload icon. Choose PDF for bills/invoices, or image for photos of receipts.</p>
+</div>
+
+<div class="step">
+  <span class="n">2</span> <h4>Add a title (like "Tea stall bill") and upload.</h4>
+</div>
+
+<h3>E. See your ranking (Leaderboard)</h3>
+
+<p>Leaderboard shows the top 50 members by stars. Your row is highlighted. The top 3 are shown on podium with crown/silver/bronze.</p>
+
+<h3>F. Update your profile</h3>
+
+<div class="step">
+  <span class="n">1</span> <h4>Go to the <strong>Profile</strong> tab.</h4>
+  <p>Tap your photo to change it. Edit your name or phone if needed.</p>
+</div>
+
+<div class="cant">
+  <strong>What a Member CANNOT do</strong>
+  <ul>
+    <li>Create or edit events</li>
+    <li>Create or assign tasks to others</li>
+    <li>Approve or reject tasks (only admin can)</li>
+    <li>Mark someone else's attendance</li>
+    <li>Change your role, position, or star count yourself</li>
+    <li>Add or remove other members</li>
+    <li>Send club-wide notifications</li>
+  </ul>
+</div>
+
+<hr>
+
+<!-- ============ ADMIN ============ -->
+<h2 id="admin">3. If you are an Admin <span class="role admin">Admin</span></h2>
+
+<p>You have a different home screen — the <strong>Admin Dashboard</strong> — showing club stats, events, and pending task reviews. You also see every tab the Member does, plus extra buttons.</p>
+
+<h3>A. Create an event (or a meeting)</h3>
+
+<div class="step">
+  <span class="n">1</span> <h4>Go to <strong>Events</strong> tab → tap the <strong>+</strong> button.</h4>
+</div>
+
+<div class="step">
+  <span class="n">2</span> <h4>Fill in: Title, Description, Venue, Date &amp; time, Duration.</h4>
+  <p>Choose <strong>Event</strong> or <strong>Meeting</strong>. Optionally upload a banner image (under 5 MB) and pick the monthly theme.</p>
+</div>
+
+<div class="step">
+  <span class="n">3</span> <h4>Tap Create.</h4>
+  <p>Every member gets a push notification. The event appears in their Upcoming list. A local reminder is set 10 minutes before the event starts.</p>
+</div>
+
+<h3>B. Start attendance — generate the QR code</h3>
+
+<div class="step">
+  <span class="n">1</span> <h4>Open the event on the day → <strong>Attendance</strong> tab.</h4>
+</div>
+
+<div class="step">
+  <span class="n">2</span> <h4>Tap <strong>Start attendance</strong> (or <strong>Rotate QR</strong> if one is already running).</h4>
+  <p>A fresh QR code appears. Put your phone on a table or project it. Members scan it to check in.</p>
+</div>
+
+<div class="tip">
+  <strong>Rotate the QR</strong> if you suspect someone is sharing a screenshot. A fresh QR invalidates old ones instantly.
+</div>
+
+<h3>C. Mark attendance manually</h3>
+
+<p>If a member forgot to scan, open the event → Attendance tab → tap <strong>Mark manually</strong> → pick the member. They get <span class="stars">+2 stars</span>.</p>
+
+<div class="warn">
+  <strong>Deactivated members are blocked.</strong> The app will refuse to mark attendance for a deactivated account and tell you to reactivate them first.
+</div>
+
+<h3>D. Create and assign tasks</h3>
+
+<div class="step">
+  <span class="n">1</span> <h4>Open an event → <strong>Tasks</strong> tab → <strong>+ Add task</strong>.</h4>
+</div>
+
+<div class="step">
+  <span class="n">2</span> <h4>Fill in: Title, Description, Assignee (pick a member), Due date (optional).</h4>
+</div>
+
+<div class="step">
+  <span class="n">3</span> <h4>Tap Create.</h4>
+  <p>The assigned member gets a push notification. The task appears in their <strong>Tasks</strong> tab.</p>
+</div>
+
+<h3>E. Review submitted tasks</h3>
+
+<div class="step">
+  <span class="n">1</span> <h4>Go to your Admin Dashboard → <strong>Review Queue</strong>.</h4>
+  <p>You see all tasks with status "Submitted" across every event.</p>
+</div>
+
+<div class="step">
+  <span class="n">2</span> <h4>Tap a task to see the proof (photo/PDF) and the member's note.</h4>
+</div>
+
+<div class="step">
+  <span class="n">3</span> <h4>Tap <strong>Approve</strong> or <strong>Reject</strong>.</h4>
+  <p>If you reject, write a short reason — the member will see it and resubmit. If you approve, the member gets <span class="stars">+3 stars</span> and a "Task approved" notification.</p>
+</div>
+
+<h3>F. Add a new member</h3>
+
+<div class="step">
+  <span class="n">1</span> <h4>Go to the <strong>Members</strong> area (from dashboard) → <strong>+ Add member</strong>.</h4>
+</div>
+
+<div class="step">
+  <span class="n">2</span> <h4>Fill in: Name, Email, Phone, Role (Member or Admin), Position.</h4>
+</div>
+
+<div class="step">
+  <span class="n">3</span> <h4>Tap <strong>Suggest password</strong> or type one.</h4>
+  <p>The app creates a unique, easy-to-read password. <strong>Copy it and share with the new member privately</strong> (WhatsApp, in person). They'll use it to sign in the first time.</p>
+</div>
+
+<div class="warn">
+  <strong>Save the password when you see it.</strong> For security, the app won't show it again. If the member forgets, they can use "Forgot password?" to reset.
+</div>
+
+<h3>G. Deactivate or reactivate a member</h3>
+
+<p>A member who leaves the club, or who shouldn't sign in for a while, can be put on hold:</p>
+
+<div class="step">
+  <span class="n">1</span> <h4>Find the member in the Members list → tap them.</h4>
+</div>
+
+<div class="step">
+  <span class="n">2</span> <h4>Tap <strong>Deactivate</strong>.</h4>
+  <p>They lose sign-in access immediately. Their existing data (tasks, attendance, stars) stays intact. To bring them back, tap <strong>Reactivate</strong>.</p>
+</div>
+
+<h3>H. Change someone's role or position</h3>
+
+<p>From the member's profile → tap <strong>Change role</strong> or <strong>Change position</strong>. You can promote a member to Admin, or change someone's title (e.g. Secretary → Treasurer). <strong>Only the President</strong> can hand over the President badge.</p>
+
+<h3>I. Send an announcement to everyone</h3>
+
+<div class="step">
+  <span class="n">1</span> <h4>Go to <strong>Notifications</strong> → <strong>+ Compose</strong>.</h4>
+</div>
+
+<div class="step">
+  <span class="n">2</span> <h4>Pick the audience: <strong>All members</strong>, <strong>Admins only</strong>, or a single person.</h4>
+</div>
+
+<div class="step">
+  <span class="n">3</span> <h4>Write title + body. Tap Send.</h4>
+  <p>Everyone in the audience gets a push + a copy in their Notifications inbox.</p>
+</div>
+
+<div class="cant">
+  <strong>What an Admin (non-President) CANNOT do</strong>
+  <ul>
+    <li>Promote anyone to President (or take President away)</li>
+    <li>Delete members permanently (only deactivate)</li>
+  </ul>
+</div>
+
+<hr>
+
+<!-- ============ PRESIDENT ============ -->
+<h2 id="president">4. If you are the President <span class="role president">President</span></h2>
+
+<p>You are an Admin with one extra badge: <strong>isPresident</strong>. In addition to everything an Admin does, you have two final authorities:</p>
+
+<h3>A. Remove a member from the club permanently</h3>
+
+<div class="warn">
+  <strong>This is permanent.</strong> Only use it when a member has truly left the club. For short absences or punishment, use <strong>Deactivate</strong> instead — it's reversible. Deletion removes their Firestore profile; their sign-in is also disabled automatically so they can't come back without admin action.
+</div>
+
+<div class="step">
+  <span class="n">1</span> <h4>Open the member's profile → tap <strong>Remove from club</strong>.</h4>
+</div>
+
+<div class="step">
+  <span class="n">2</span> <h4>Confirm.</h4>
+  <p>Their sign-in is disabled, their profile is deleted. Their past attendance, task approvals, etc. stay in the club's records (the events still show them as a past attendee).</p>
+</div>
+
+<h3>B. Hand over the President role</h3>
+
+<p>When a new President is elected:</p>
+
+<div class="step">
+  <span class="n">1</span> <h4>Open the NEW president's profile.</h4>
+</div>
+
+<div class="step">
+  <span class="n">2</span> <h4>Change Position → <strong>President</strong>.</h4>
+  <p>The app automatically sets their <code>isPresident</code> flag. Only the current President can do this.</p>
+</div>
+
+<div class="step">
+  <span class="n">3</span> <h4>Change your own Position to something else (e.g. Vice-President, Member).</h4>
+  <p>This clears your President badge. From now on, the new President has the top authority.</p>
+</div>
+
+<div class="tip">
+  <strong>Tip:</strong> You can only have one President at a time per club. Setting a new President's position to "President" automatically un-sets any previous one.
+</div>
+
+<hr>
+
+<!-- ============ STARS ============ -->
+<h2 id="stars">5. How to earn stars ⭐</h2>
+
+<p>Stars are how the club recognizes active members. The leaderboard ranks members by stars.</p>
+
+<table>
+  <tr><th>What you did</th><th>Stars</th><th>Who awards</th></tr>
+  <tr><td>Checked in to an event (QR or manual)</td><td><span class="stars">+2</span></td><td>Automatic when admin marks present</td></tr>
+  <tr><td>Task approved by admin</td><td><span class="stars">+3</span></td><td>Admin on approval</td></tr>
+  <tr><td>Task rejected</td><td>0</td><td>(resubmit to try again)</td></tr>
+</table>
+
+<div class="tip">
+  <strong>Your own stars can't be edited by you.</strong> The app protects the leaderboard — only admin-driven actions (attendance + task approvals) move your count.
+</div>
+
+<hr>
+
+<!-- ============ FAQ ============ -->
+<h2 id="faq">6. Questions &amp; problems</h2>
+
+<h3>I forgot my password.</h3>
+<p>On the sign-in screen, tap <strong>Forgot password?</strong> Enter your email. Check your inbox (and spam folder) for a reset link.</p>
+
+<h3>I'm not getting notifications on my phone.</h3>
+<ol>
+  <li>Check Android Settings → Notifications → Agaram → make sure it's allowed.</li>
+  <li>Sign out and sign back in. This re-subscribes you to all notification topics.</li>
+  <li>If still nothing, tell your admin — they can re-send the event notification.</li>
+</ol>
+
+<h3>The QR scan says "invalid or expired".</h3>
+<p>The admin has probably rotated the QR. Ask them to show you the new one on their phone and try again.</p>
+
+<h3>The QR scan says "check-in opens 3 hours before".</h3>
+<p>You're early. Scan closer to the event start time. The window opens 3 hours before the scheduled start.</p>
+
+<h3>It says "account has been deactivated".</h3>
+<p>Your admin has put your account on hold. Ask them to reactivate it if this is a mistake.</p>
+
+<h3>A task I see in the list won't let me upload proof.</h3>
+<p>Check the status — if it's already <strong>Submitted</strong> or <strong>Approved</strong>, you can't change it. Only <strong>Pending</strong> and <strong>Rejected</strong> tasks accept new proof.</p>
+
+<h3>I uploaded a photo by mistake — can I delete it?</h3>
+<p>Yes, only if YOU uploaded it. Go to the Gallery tab, tap your photo, tap delete. Admins can delete anyone's photo.</p>
+
+<h3>The leaderboard says I have fewer stars than I expected.</h3>
+<p>Right now, <strong>attendance stars are credited when the admin marks attendance manually</strong>. If you only scanned the QR, the stars are recorded on the event but not yet added to your profile count until an admin syncs — this is by design for security. Ask your admin to double-check the attendance list.</p>
+
+<h3>I changed phones — what do I do?</h3>
+<p>Just install the app on the new phone and sign in with the same email and password. All your data (stars, tasks, history) comes with you — it's stored in the cloud, not on your phone.</p>
+
+<hr>
+
+<footer>
+  <p>Agaram — Tamil Ilakiya Mandram · User manual v1.0 · For the current app release.</p>
+  <p>If something in the app doesn't match this manual, trust the app — tell your admin so the manual can be updated.</p>
+</footer>
+
+</div>
+</body>
+</html>
