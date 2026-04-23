@@ -1,9 +1,14 @@
+import 'dart:io';
+
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
 
 import '../../core/auth_service.dart';
+import '../../core/cloudinary_service.dart';
 import '../../core/routes.dart';
 import '../../core/theme.dart';
 import '../../models/app_user.dart';
@@ -45,7 +50,7 @@ class ProfileScreen extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               const SizedBox(height: 8),
-              _avatar(user),
+              _AvatarPicker(user: user),
               const SizedBox(height: 20),
               Text(
                 user.name.isEmpty ? '—' : user.name,
@@ -107,62 +112,6 @@ class ProfileScreen extends StatelessWidget {
             ],
           ),
         ),
-      ),
-    );
-  }
-
-  Widget _avatar(AppUser user) {
-    return Center(
-      child: Stack(
-        clipBehavior: Clip.none,
-        children: [
-          Container(
-            height: 104,
-            width: 104,
-            decoration: BoxDecoration(
-              color: AgaramColors.primaryContainer,
-              shape: BoxShape.circle,
-              border: Border.all(color: AgaramColors.surface, width: 4),
-              boxShadow: [
-                BoxShadow(
-                  color: AgaramColors.primary.withValues(alpha: 0.15),
-                  blurRadius: 14,
-                  offset: const Offset(0, 6),
-                ),
-              ],
-            ),
-            child: user.photoUrl != null
-                ? ClipOval(child: Image.network(user.photoUrl!, fit: BoxFit.cover))
-                : Center(
-                    child: Text(
-                      'அ',
-                      style: GoogleFonts.notoSerifTamil(
-                        fontSize: 56,
-                        fontWeight: FontWeight.w700,
-                        color: AgaramColors.secondaryContainer,
-                      ),
-                    ),
-                  ),
-          ),
-          Positioned(
-            right: 0,
-            bottom: 0,
-            child: Container(
-              height: 32,
-              width: 32,
-              decoration: BoxDecoration(
-                color: AgaramColors.secondaryContainer,
-                shape: BoxShape.circle,
-                border: Border.all(color: AgaramColors.surface, width: 2),
-              ),
-              child: const Icon(
-                Icons.photo_camera_rounded,
-                size: 16,
-                color: AgaramColors.secondary,
-              ),
-            ),
-          ),
-        ],
       ),
     );
   }
@@ -259,6 +208,128 @@ class ProfileScreen extends StatelessWidget {
     Navigator.of(context).pushNamedAndRemoveUntil(
       Routes.login,
       (_) => false,
+    );
+  }
+}
+
+class _AvatarPicker extends StatefulWidget {
+  final AppUser user;
+  const _AvatarPicker({required this.user});
+
+  @override
+  State<_AvatarPicker> createState() => _AvatarPickerState();
+}
+
+class _AvatarPickerState extends State<_AvatarPicker> {
+  bool _busy = false;
+
+  Future<void> _pick() async {
+    if (_busy) return;
+    final picked = await ImagePicker().pickImage(
+      source: ImageSource.gallery,
+      maxWidth: 800,
+      imageQuality: 85,
+    );
+    if (picked == null || !mounted) return;
+    setState(() => _busy = true);
+    try {
+      final url = await CloudinaryService.uploadAvatar(File(picked.path));
+      await FirebaseFirestore.instance
+          .collection('users')
+          .doc(widget.user.uid)
+          .update({'photoUrl': url});
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Photo updated')),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Couldn’t update photo: $e')),
+      );
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final user = widget.user;
+    return Center(
+      child: GestureDetector(
+        onTap: _pick,
+        child: Stack(
+          clipBehavior: Clip.none,
+          children: [
+            Container(
+              height: 104,
+              width: 104,
+              decoration: BoxDecoration(
+                color: AgaramColors.primaryContainer,
+                shape: BoxShape.circle,
+                border: Border.all(color: AgaramColors.surface, width: 4),
+                boxShadow: [
+                  BoxShadow(
+                    color: AgaramColors.primary.withValues(alpha: 0.15),
+                    blurRadius: 14,
+                    offset: const Offset(0, 6),
+                  ),
+                ],
+              ),
+              child: user.photoUrl != null
+                  ? ClipOval(
+                      child: CachedNetworkImage(
+                        imageUrl: user.photoUrl!,
+                        fit: BoxFit.cover,
+                        placeholder: (_, _) => Container(
+                          color: AgaramColors.primaryContainer,
+                        ),
+                        errorWidget: (_, _, _) => const Icon(
+                          Icons.person_rounded,
+                          color: Colors.white,
+                        ),
+                      ),
+                    )
+                  : Center(
+                      child: Text(
+                        'அ',
+                        style: GoogleFonts.notoSerifTamil(
+                          fontSize: 56,
+                          fontWeight: FontWeight.w700,
+                          color: AgaramColors.secondaryContainer,
+                        ),
+                      ),
+                    ),
+            ),
+            Positioned(
+              right: 0,
+              bottom: 0,
+              child: Container(
+                height: 32,
+                width: 32,
+                decoration: BoxDecoration(
+                  color: AgaramColors.secondaryContainer,
+                  shape: BoxShape.circle,
+                  border: Border.all(color: AgaramColors.surface, width: 2),
+                ),
+                child: _busy
+                    ? const Padding(
+                        padding: EdgeInsets.all(6),
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: AgaramColors.secondary,
+                        ),
+                      )
+                    : const Icon(
+                        Icons.photo_camera_rounded,
+                        size: 16,
+                        color: AgaramColors.secondary,
+                      ),
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }
