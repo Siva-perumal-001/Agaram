@@ -23,10 +23,18 @@ class MonthlyTheme {
     );
   }
 
-  static const MonthlyTheme fallbackApril2026 = MonthlyTheme(
-    yearMonth: '2026-04',
-    tamilTitle: 'இயற்கை',
-    englishTitle: 'Nature in Tamil Poetry',
-    description: 'Verses that celebrate rivers, hills, monsoon, and the living world.',
-  );
+  /// Used when Firestore has no doc for the current month and offline
+  /// fetch failed — kept neutral so it never feels stale regardless of
+  /// which month the user opens the app in.
+  static MonthlyTheme neutralFallback([DateTime? now]) {
+    final n = now ?? DateTime.now();
+    final yearMonth =
+        '${n.year.toString().padLeft(4, '0')}-${n.month.toString().padLeft(2, '0')}';
+    return MonthlyTheme(
+      yearMonth: yearMonth,
+      tamilTitle: 'இம்மாத தீம்',
+      englishTitle: 'Theme coming soon',
+      description: 'Your club admin will publish this month\'s theme shortly.',
+    );
+  }
 }

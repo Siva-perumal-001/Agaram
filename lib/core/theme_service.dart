@@ -19,6 +19,6 @@ class MonthlyThemeService {
     } catch (_) {
       // Offline / permission — use fallback.
     }
-    return MonthlyTheme.fallbackApril2026;
+    return MonthlyTheme.neutralFallback();
   }
 }

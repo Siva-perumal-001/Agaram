@@ -66,7 +66,7 @@ class _MemberHomeScreenState extends State<MemberHomeScreen> {
               FutureBuilder<MonthlyTheme>(
                 future: _themeFuture,
                 builder: (_, snap) {
-                  final theme = snap.data ?? MonthlyTheme.fallbackApril2026;
+                  final theme = snap.data ?? MonthlyTheme.neutralFallback();
                   return MonthlyThemeBanner(theme: theme);
                 },
               ),
