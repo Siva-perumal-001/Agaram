@@ -43,18 +43,39 @@ class FcmService {
     FirebaseMessaging.onMessage.listen(_onForegroundMessage);
   }
 
-  static Future<void> subscribeForMember() async {
+  static String userTopic(String uid) => 'user_$uid';
+
+  static Future<void> subscribeForMember(String uid) async {
     await _messaging.subscribeToTopic(AppConfig.topicAllMembers);
+    await _messaging.subscribeToTopic(userTopic(uid));
   }
 
-  static Future<void> subscribeForAdmin() async {
+  static Future<void> subscribeForAdmin(String uid) async {
     await _messaging.subscribeToTopic(AppConfig.topicAllMembers);
     await _messaging.subscribeToTopic(AppConfig.topicAdmins);
+    await _messaging.subscribeToTopic(userTopic(uid));
   }
 
-  static Future<void> unsubscribeAll() async {
+  static Future<void> unsubscribeAll({String? uid}) async {
     await _messaging.unsubscribeFromTopic(AppConfig.topicAllMembers);
     await _messaging.unsubscribeFromTopic(AppConfig.topicAdmins);
+    if (uid != null) {
+      await _messaging.unsubscribeFromTopic(userTopic(uid));
+    }
+  }
+
+  static Future<void> sendToUser({
+    required String uid,
+    required String title,
+    required String body,
+    Map<String, String>? data,
+  }) {
+    return sendToTopic(
+      topic: userTopic(uid),
+      title: title,
+      body: body,
+      data: data,
+    );
   }
 
   static Future<void> _onForegroundMessage(RemoteMessage message) async {

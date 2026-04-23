@@ -24,10 +24,11 @@ class AuthService extends ChangeNotifier {
 
   Future<void> _handleAuthChange(User? firebaseUser) async {
     if (firebaseUser == null) {
+      final lastUid = _currentUser?.uid;
       _currentUser = null;
       _status = AuthStatus.unauthenticated;
       try {
-        await FcmService.unsubscribeAll();
+        await FcmService.unsubscribeAll(uid: lastUid);
       } catch (_) {
         // topic unsubscribe is best-effort.
       }
@@ -38,9 +39,9 @@ class AuthService extends ChangeNotifier {
       await _loadUser(firebaseUser.uid);
       _status = AuthStatus.authenticated;
       if (_currentUser?.isAdmin ?? false) {
-        await FcmService.subscribeForAdmin();
+        await FcmService.subscribeForAdmin(firebaseUser.uid);
       } else {
-        await FcmService.subscribeForMember();
+        await FcmService.subscribeForMember(firebaseUser.uid);
       }
     } catch (e) {
       await _auth.signOut();
@@ -59,7 +60,13 @@ class AuthService extends ChangeNotifier {
         'Your account exists but is not set up yet. Contact your club admin.',
       );
     }
-    _currentUser = AppUser.fromFirestore(doc);
+    final user = AppUser.fromFirestore(doc);
+    if (!user.active) {
+      throw AuthException(
+        'This account has been deactivated by your admin. Contact them if this is a mistake.',
+      );
+    }
+    _currentUser = user;
   }
 
   Future<void> signIn({required String email, required String password}) async {
