@@ -35,8 +35,11 @@ class _EventFormScreenState extends State<EventFormScreen> {
   String? _bannerUrl;
   bool _uploadingBanner = false;
   bool _saving = false;
+  String _kind = 'event';
+  int _durationMinutes = 120;
 
   bool get _isEdit => widget.existing != null;
+  bool get _isMeeting => _kind == 'meeting';
 
   @override
   void initState() {
@@ -49,6 +52,8 @@ class _EventFormScreenState extends State<EventFormScreen> {
       _date = e.date;
       _time = TimeOfDay(hour: e.date.hour, minute: e.date.minute);
       _bannerUrl = e.bannerUrl;
+      _kind = e.kind;
+      _durationMinutes = e.durationMinutes;
     }
   }
 
@@ -104,8 +109,10 @@ class _EventFormScreenState extends State<EventFormScreen> {
           'description': _descCtrl.text.trim(),
           'venue': _venueCtrl.text.trim(),
           'date': Timestamp.fromDate(combined),
-          'bannerUrl': finalBannerUrl,
-          'monthlyTheme': themeId,
+          'bannerUrl': _isMeeting ? null : finalBannerUrl,
+          'monthlyTheme': _isMeeting ? null : themeId,
+          'kind': _kind,
+          'durationMinutes': _durationMinutes,
         });
       } else {
         await EventService.createEvent({
@@ -116,8 +123,10 @@ class _EventFormScreenState extends State<EventFormScreen> {
           'createdBy': user.uid,
           'status': 'upcoming',
           'tasksCount': 0,
-          'bannerUrl': finalBannerUrl,
-          'monthlyTheme': themeId,
+          'bannerUrl': _isMeeting ? null : finalBannerUrl,
+          'monthlyTheme': _isMeeting ? null : themeId,
+          'kind': _kind,
+          'durationMinutes': _durationMinutes,
         });
       }
       if (!mounted) return;
@@ -136,7 +145,11 @@ class _EventFormScreenState extends State<EventFormScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text(_isEdit ? 'Edit Event' : 'Create Event'),
+        title: Text(
+          _isEdit
+              ? (_isMeeting ? 'Edit Meeting' : 'Edit Event')
+              : (_isMeeting ? 'Create Meeting' : 'Create Event'),
+        ),
         actions: [
           TextButton(
             onPressed: _saving ? null : _save,
@@ -151,18 +164,22 @@ class _EventFormScreenState extends State<EventFormScreen> {
           child: ListView(
             padding: const EdgeInsets.fromLTRB(20, 8, 20, 120),
             children: [
-              BannerUploadField(
-                localFile: _bannerFile,
-                remoteUrl: _bannerUrl,
-                uploading: _uploadingBanner,
-                onPicked: (f) => setState(() => _bannerFile = f),
-                onClear: () => setState(() {
-                  _bannerFile = null;
-                  _bannerUrl = null;
-                }),
-              ),
-              const SizedBox(height: 24),
-              _label('Event Title'),
+              _kindToggle(),
+              const SizedBox(height: 20),
+              if (!_isMeeting) ...[
+                BannerUploadField(
+                  localFile: _bannerFile,
+                  remoteUrl: _bannerUrl,
+                  uploading: _uploadingBanner,
+                  onPicked: (f) => setState(() => _bannerFile = f),
+                  onClear: () => setState(() {
+                    _bannerFile = null;
+                    _bannerUrl = null;
+                  }),
+                ),
+                const SizedBox(height: 24),
+              ],
+              _label(_isMeeting ? 'Meeting Title' : 'Event Title'),
               const SizedBox(height: 8),
               TextFormField(
                 controller: _titleCtrl,
@@ -228,6 +245,18 @@ class _EventFormScreenState extends State<EventFormScreen> {
                 validator: (v) =>
                     (v == null || v.trim().isEmpty) ? 'Venue is required' : null,
               ),
+              const SizedBox(height: 20),
+              _label('Duration'),
+              const SizedBox(height: 8),
+              Wrap(
+                spacing: 8,
+                children: [
+                  _durationChip(60),
+                  _durationChip(90),
+                  _durationChip(120),
+                  _durationChip(180),
+                ],
+              ),
               const SizedBox(height: 32),
               ElevatedButton(
                 onPressed: _saving ? null : _save,
@@ -240,11 +269,17 @@ class _EventFormScreenState extends State<EventFormScreen> {
                           strokeWidth: 2.5,
                         ),
                       )
-                    : Text(_isEdit ? 'Save Changes' : 'Create Event'),
+                    : Text(
+                        _isEdit
+                            ? 'Save Changes'
+                            : (_isMeeting ? 'Create Meeting' : 'Create Event'),
+                      ),
               ),
               const SizedBox(height: 12),
               Text(
-                'Add tasks to this event after creating it from the event detail screen.',
+                _isMeeting
+                    ? 'Members can check in via QR starting 3 hours before the meeting.'
+                    : 'Add tasks to this event after creating it from the event detail screen.',
                 textAlign: TextAlign.center,
                 style: GoogleFonts.inter(
                   fontSize: 12,
@@ -252,6 +287,102 @@ class _EventFormScreenState extends State<EventFormScreen> {
                 ),
               ),
             ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _kindToggle() {
+    return Container(
+      padding: const EdgeInsets.all(4),
+      decoration: BoxDecoration(
+        color: AgaramColors.surfaceContainerLow,
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: Row(
+        children: [
+          _kindSegment('Event', 'event', Icons.event_rounded),
+          _kindSegment('Meeting', 'meeting', Icons.groups_rounded),
+        ],
+      ),
+    );
+  }
+
+  Widget _kindSegment(String label, String value, IconData icon) {
+    final selected = _kind == value;
+    return Expanded(
+      child: GestureDetector(
+        onTap: () => setState(() => _kind = value),
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 160),
+          padding: const EdgeInsets.symmetric(vertical: 10),
+          decoration: BoxDecoration(
+            color: selected
+                ? AgaramColors.surfaceContainerLowest
+                : Colors.transparent,
+            borderRadius: BorderRadius.circular(999),
+            boxShadow: selected
+                ? [
+                    BoxShadow(
+                      color: AgaramColors.primary.withValues(alpha: 0.06),
+                      blurRadius: 8,
+                      offset: const Offset(0, 2),
+                    ),
+                  ]
+                : null,
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(
+                icon,
+                size: 16,
+                color: selected
+                    ? AgaramColors.primary
+                    : AgaramColors.onSurfaceVariant,
+              ),
+              const SizedBox(width: 6),
+              Text(
+                label,
+                style: GoogleFonts.inter(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                  color: selected
+                      ? AgaramColors.primary
+                      : AgaramColors.onSurfaceVariant,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _durationChip(int minutes) {
+    final selected = _durationMinutes == minutes;
+    return GestureDetector(
+      onTap: () => setState(() => _durationMinutes = minutes),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 150),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+        decoration: BoxDecoration(
+          color: selected
+              ? AgaramColors.primaryContainer
+              : AgaramColors.surfaceContainerLow,
+          borderRadius: BorderRadius.circular(999),
+        ),
+        child: Text(
+          minutes >= 60
+              ? (minutes % 60 == 0
+                  ? '${minutes ~/ 60} hr'
+                  : '${(minutes / 60).toStringAsFixed(1)} hr')
+              : '$minutes min',
+          style: GoogleFonts.inter(
+            fontSize: 13,
+            fontWeight: FontWeight.w600,
+            color: selected ? Colors.white : AgaramColors.onSurfaceVariant,
           ),
         ),
       ),

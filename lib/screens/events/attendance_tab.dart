@@ -125,6 +125,8 @@ class AttendanceTab extends StatelessWidget {
   }
 
   Widget _memberCheckIn(BuildContext context) {
+    final now = DateTime.now();
+    final open = event.isAttendanceOpenAt(now);
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 28, horizontal: 20),
       decoration: BoxDecoration(
@@ -176,15 +178,43 @@ class AttendanceTab extends StatelessWidget {
           ),
           const SizedBox(height: 20),
           ElevatedButton.icon(
-            onPressed: () => Navigator.of(context).push(
-              MaterialPageRoute(builder: (_) => const QrScannerScreen()),
-            ),
+            onPressed: open
+                ? () => Navigator.of(context).push(
+                      MaterialPageRoute(builder: (_) => const QrScannerScreen()),
+                    )
+                : null,
             icon: const Icon(Icons.qr_code_scanner_rounded),
             label: const Text('Scan QR to Check In'),
           ),
+          if (!open) ...[
+            const SizedBox(height: 10),
+            Text(
+              _windowHelper(now),
+              textAlign: TextAlign.center,
+              style: GoogleFonts.inter(
+                fontSize: 12,
+                color: AgaramColors.onSurfaceVariant,
+                fontStyle: FontStyle.italic,
+              ),
+            ),
+          ],
         ],
       ),
     );
+  }
+
+  String _windowHelper(DateTime now) {
+    if (now.isBefore(event.attendanceWindowOpensAt)) {
+      final diff = event.attendanceWindowOpensAt.difference(now);
+      if (diff.inHours >= 24) {
+        return 'Check-in opens ${diff.inDays} day${diff.inDays == 1 ? '' : 's'} before the session.';
+      }
+      if (diff.inHours >= 1) {
+        return 'Check-in opens in ${diff.inHours} hr ${diff.inMinutes % 60} min.';
+      }
+      return 'Check-in opens in ${diff.inMinutes} min.';
+    }
+    return 'Check-in has closed for this session.';
   }
 
   Widget _memberChecked(BuildContext context, AttendanceEntry entry) {
@@ -234,18 +264,39 @@ class AttendanceTab extends StatelessWidget {
   }
 
   Widget _adminCard(BuildContext context) {
-    return ElevatedButton.icon(
-      style: ElevatedButton.styleFrom(
-        backgroundColor: AgaramColors.secondary,
-        foregroundColor: Colors.white,
-      ),
-      onPressed: () => Navigator.of(context).push(
-        MaterialPageRoute(
-          builder: (_) => QrDisplayScreen(event: event),
+    final now = DateTime.now();
+    final open = event.isAttendanceOpenAt(now);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        ElevatedButton.icon(
+          style: ElevatedButton.styleFrom(
+            backgroundColor: AgaramColors.secondary,
+            foregroundColor: Colors.white,
+          ),
+          onPressed: open
+              ? () => Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (_) => QrDisplayScreen(event: event),
+                    ),
+                  )
+              : null,
+          icon: const Icon(Icons.qr_code_rounded),
+          label: const Text('Show Event QR'),
         ),
-      ),
-      icon: const Icon(Icons.qr_code_rounded),
-      label: const Text('Show Event QR'),
+        if (!open) ...[
+          const SizedBox(height: 8),
+          Text(
+            _windowHelper(now),
+            textAlign: TextAlign.center,
+            style: GoogleFonts.inter(
+              fontSize: 12,
+              color: AgaramColors.onSurfaceVariant,
+              fontStyle: FontStyle.italic,
+            ),
+          ),
+        ],
+      ],
     );
   }
 

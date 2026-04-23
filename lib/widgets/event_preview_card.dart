@@ -11,6 +11,7 @@ class EventPreviewCard extends StatelessWidget {
   final String? bannerUrl;
   final VoidCallback? onTap;
   final double? width;
+  final bool isMeeting;
 
   const EventPreviewCard({
     super.key,
@@ -21,6 +22,7 @@ class EventPreviewCard extends StatelessWidget {
     this.bannerUrl,
     this.onTap,
     this.width,
+    this.isMeeting = false,
   });
 
   static const _months = [

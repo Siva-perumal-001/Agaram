@@ -11,6 +11,8 @@ import 'event_form_screen.dart';
 
 enum _Tab { upcoming, ongoing, past }
 
+enum _KindFilter { all, events, meetings }
+
 class EventsListScreen extends StatefulWidget {
   const EventsListScreen({super.key});
 
@@ -20,6 +22,7 @@ class EventsListScreen extends StatefulWidget {
 
 class _EventsListScreenState extends State<EventsListScreen> {
   _Tab _tab = _Tab.upcoming;
+  _KindFilter _kind = _KindFilter.all;
 
   @override
   Widget build(BuildContext context) {
@@ -41,8 +44,23 @@ class _EventsListScreenState extends State<EventsListScreen> {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             Padding(
-              padding: const EdgeInsets.fromLTRB(20, 8, 20, 16),
+              padding: const EdgeInsets.fromLTRB(20, 8, 20, 8),
               child: _segmented(),
+            ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 4, 20, 12),
+              child: SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                child: Row(
+                  children: [
+                    _kindChip('All', _KindFilter.all),
+                    const SizedBox(width: 8),
+                    _kindChip('Events', _KindFilter.events),
+                    const SizedBox(width: 8),
+                    _kindChip('Meetings', _KindFilter.meetings),
+                  ],
+                ),
+              ),
             ),
             Expanded(child: _list()),
           ],
@@ -58,9 +76,34 @@ class _EventsListScreenState extends State<EventsListScreen> {
                 ),
               ),
               icon: const Icon(Icons.add_rounded),
-              label: const Text('Create Event'),
+              label: const Text('Create'),
             )
           : null,
+    );
+  }
+
+  Widget _kindChip(String label, _KindFilter value) {
+    final selected = _kind == value;
+    return GestureDetector(
+      onTap: () => setState(() => _kind = value),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 150),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+        decoration: BoxDecoration(
+          color: selected
+              ? AgaramColors.primaryContainer
+              : AgaramColors.surfaceContainerLow,
+          borderRadius: BorderRadius.circular(999),
+        ),
+        child: Text(
+          label,
+          style: GoogleFonts.inter(
+            fontSize: 12,
+            fontWeight: FontWeight.w600,
+            color: selected ? Colors.white : AgaramColors.onSurfaceVariant,
+          ),
+        ),
+      ),
     );
   }
 
@@ -137,7 +180,17 @@ class _EventsListScreenState extends State<EventsListScreen> {
         if (snap.connectionState == ConnectionState.waiting) {
           return const Center(child: CircularProgressIndicator());
         }
-        final docs = snap.data?.docs ?? [];
+        final docs = (snap.data?.docs ?? []).where((d) {
+          final kind = d.data()['kind'] as String? ?? 'event';
+          switch (_kind) {
+            case _KindFilter.all:
+              return true;
+            case _KindFilter.events:
+              return kind != 'meeting';
+            case _KindFilter.meetings:
+              return kind == 'meeting';
+          }
+        }).toList();
         if (docs.isEmpty) return const _EmptyState();
         return ListView.separated(
           padding: const EdgeInsets.fromLTRB(20, 0, 20, 120),
@@ -154,6 +207,7 @@ class _EventsListScreenState extends State<EventsListScreen> {
               date: date,
               tasksCount: (d['tasksCount'] as num?)?.toInt() ?? 0,
               bannerUrl: d['bannerUrl'] as String?,
+              isMeeting: (d['kind'] as String?) == 'meeting',
               onTap: () => Navigator.of(context).push(
                 MaterialPageRoute(
                   builder: (_) => EventDetailScreen(eventId: eventId),

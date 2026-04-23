@@ -63,7 +63,8 @@ class AttendanceService {
       if (!eventSnap.exists) {
         throw AttendanceException('This event no longer exists.');
       }
-      final eventSecret = eventSnap.data()?['qrSecret'] as String?;
+      final eventData = eventSnap.data()!;
+      final eventSecret = eventData['qrSecret'] as String?;
       if (eventSecret == null || eventSecret.isEmpty) {
         throw AttendanceException(
           'Attendance isn’t open yet. Ask your admin to start it.',
@@ -73,6 +74,27 @@ class AttendanceService {
         throw AttendanceException(
           'That QR is invalid or expired. Ask your admin for a fresh one.',
         );
+      }
+
+      // 3-hour window enforcement (server-side safety net).
+      final startTs = eventData['date'] as Timestamp?;
+      if (startTs != null) {
+        final start = startTs.toDate();
+        final duration =
+            (eventData['durationMinutes'] as num?)?.toInt() ?? 120;
+        final windowOpen = start.subtract(const Duration(hours: 3));
+        final windowClose = start.add(Duration(minutes: duration));
+        final now = DateTime.now();
+        if (now.isBefore(windowOpen)) {
+          throw AttendanceException(
+            'Check-in opens 3 hours before the session starts.',
+          );
+        }
+        if (now.isAfter(windowClose)) {
+          throw AttendanceException(
+            'Check-in for this session has closed.',
+          );
+        }
       }
 
       final attendanceSnap = await tx.get(attendanceRef);
