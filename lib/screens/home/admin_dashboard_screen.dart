@@ -4,12 +4,16 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 
 import '../../core/auth_service.dart';
+import '../../core/notifications_service.dart';
 import '../../core/theme.dart';
 import '../../models/app_user.dart';
 import '../../widgets/activity_item.dart';
 import '../../widgets/agaram_logo.dart';
 import '../../widgets/quick_action_card.dart';
 import '../../widgets/stat_tile.dart';
+import '../leaderboard/leaderboard_screen.dart';
+import '../members/members_list_screen.dart';
+import '../notifications/notifications_inbox_screen.dart';
 
 class AdminDashboardScreen extends StatelessWidget {
   const AdminDashboardScreen({super.key});
@@ -20,7 +24,7 @@ class AdminDashboardScreen extends StatelessWidget {
     if (user == null) return const SizedBox.shrink();
 
     return Scaffold(
-      appBar: _buildAppBar(),
+      appBar: _buildAppBar(context, user.uid),
       body: SafeArea(
         top: false,
         child: SingleChildScrollView(
@@ -121,18 +125,72 @@ class AdminDashboardScreen extends StatelessWidget {
     );
   }
 
-  PreferredSizeWidget _buildAppBar() {
+  PreferredSizeWidget _buildAppBar(BuildContext context, String uid) {
     return AppBar(
       backgroundColor: AgaramColors.surface,
       titleSpacing: 20,
       title: const AgaramWordmark(fontSize: 20),
-      actions: const [
-        Padding(
-          padding: EdgeInsets.only(right: 20),
-          child: Icon(
-            Icons.notifications_none_rounded,
+      actions: [
+        IconButton(
+          icon: const Icon(
+            Icons.people_alt_rounded,
             color: AgaramColors.primary,
-            size: 26,
+          ),
+          tooltip: 'Members',
+          onPressed: () => Navigator.of(context).push(
+            MaterialPageRoute(builder: (_) => const MembersListScreen()),
+          ),
+        ),
+        IconButton(
+          icon: const Icon(
+            Icons.emoji_events_rounded,
+            color: AgaramColors.primary,
+          ),
+          tooltip: 'Leaderboard',
+          onPressed: () => Navigator.of(context).push(
+            MaterialPageRoute(builder: (_) => const LeaderboardScreen()),
+          ),
+        ),
+        Padding(
+          padding: const EdgeInsets.only(right: 8),
+          child: StreamBuilder<int>(
+            stream: NotificationsService.unreadCount(uid),
+            builder: (_, snap) {
+              final count = snap.data ?? 0;
+              return Stack(
+                clipBehavior: Clip.none,
+                children: [
+                  IconButton(
+                    icon: const Icon(
+                      Icons.notifications_none_rounded,
+                      color: AgaramColors.primary,
+                    ),
+                    onPressed: () => Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (_) => const NotificationsInboxScreen(),
+                      ),
+                    ),
+                  ),
+                  if (count > 0)
+                    Positioned(
+                      right: 8,
+                      top: 8,
+                      child: Container(
+                        height: 12,
+                        width: 12,
+                        decoration: BoxDecoration(
+                          color: AgaramColors.secondary,
+                          shape: BoxShape.circle,
+                          border: Border.all(
+                            color: AgaramColors.surface,
+                            width: 2,
+                          ),
+                        ),
+                      ),
+                    ),
+                ],
+              );
+            },
           ),
         ),
       ],

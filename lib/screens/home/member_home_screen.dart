@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 
 import '../../core/auth_service.dart';
 import '../../core/kural_service.dart';
+import '../../core/notifications_service.dart';
 import '../../core/theme.dart';
 import '../../core/theme_service.dart';
 import '../../models/app_user.dart';
@@ -15,6 +16,8 @@ import '../../widgets/event_preview_card.dart';
 import '../../widgets/kural_card.dart';
 import '../../widgets/monthly_theme_banner.dart';
 import '../../widgets/star_card.dart';
+import '../leaderboard/leaderboard_screen.dart';
+import '../notifications/notifications_inbox_screen.dart';
 
 class MemberHomeScreen extends StatefulWidget {
   const MemberHomeScreen({super.key});
@@ -118,30 +121,53 @@ class _MemberHomeScreenState extends State<MemberHomeScreen> {
   }
 
   PreferredSizeWidget _buildAppBar(BuildContext context) {
+    final uid = context.watch<AuthService>().currentUser?.uid;
     return AppBar(
       backgroundColor: AgaramColors.surface,
       titleSpacing: 20,
       title: const AgaramWordmark(fontSize: 20),
       actions: [
         Padding(
-          padding: const EdgeInsets.only(right: 20),
-          child: Stack(
-            clipBehavior: Clip.none,
-            children: [
-              IconButton(
-                icon: const Icon(
-                  Icons.notifications_none_rounded,
-                  color: AgaramColors.primary,
-                  size: 26,
-                ),
-                onPressed: () {},
+          padding: const EdgeInsets.only(right: 12),
+          child: _NotificationBell(uid: uid),
+        ),
+      ],
+    );
+  }
+}
+
+class _NotificationBell extends StatelessWidget {
+  final String? uid;
+  const _NotificationBell({required this.uid});
+
+  @override
+  Widget build(BuildContext context) {
+    return StreamBuilder<int>(
+      stream: uid == null ? const Stream.empty() : NotificationsService.unreadCount(uid!),
+      builder: (_, snap) {
+        final count = snap.data ?? 0;
+        return Stack(
+          clipBehavior: Clip.none,
+          children: [
+            IconButton(
+              icon: const Icon(
+                Icons.notifications_none_rounded,
+                color: AgaramColors.primary,
+                size: 26,
               ),
+              onPressed: () => Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (_) => const NotificationsInboxScreen(),
+                ),
+              ),
+            ),
+            if (count > 0)
               Positioned(
-                right: 10,
-                top: 10,
+                right: 8,
+                top: 8,
                 child: Container(
-                  height: 10,
-                  width: 10,
+                  height: 12,
+                  width: 12,
                   decoration: BoxDecoration(
                     color: AgaramColors.secondary,
                     shape: BoxShape.circle,
@@ -149,10 +175,9 @@ class _MemberHomeScreenState extends State<MemberHomeScreen> {
                   ),
                 ),
               ),
-            ],
-          ),
-        ),
-      ],
+          ],
+        );
+      },
     );
   }
 }
@@ -171,7 +196,13 @@ class _StarStreamCard extends StatelessWidget {
       stream: stream,
       builder: (_, snap) {
         final stars = (snap.data?.data()?['stars'] as num?)?.toInt() ?? 0;
-        return StarCard(stars: stars, rank: null);
+        return StarCard(
+          stars: stars,
+          rank: null,
+          onViewLeaderboard: () => Navigator.of(context).push(
+            MaterialPageRoute(builder: (_) => const LeaderboardScreen()),
+          ),
+        );
       },
     );
   }
