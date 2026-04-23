@@ -20,6 +20,7 @@ class MembersListScreen extends StatefulWidget {
 class _MembersListScreenState extends State<MembersListScreen> {
   final _searchCtrl = TextEditingController();
   String _query = '';
+  bool _showInactive = false;
 
   @override
   void dispose() {
@@ -63,18 +64,21 @@ class _MembersListScreenState extends State<MembersListScreen> {
                   final users = (snap.data?.docs ?? [])
                       .map(AppUser.fromFirestore)
                       .toList();
-                  final filtered = _query.isEmpty
-                      ? users
-                      : users.where((u) =>
-                          u.name.toLowerCase().contains(_query) ||
-                          u.email.toLowerCase().contains(_query)).toList();
+                  final visible = users.where((u) {
+                    if (!_showInactive && !u.active) return false;
+                    if (_query.isEmpty) return true;
+                    return u.name.toLowerCase().contains(_query) ||
+                        u.email.toLowerCase().contains(_query);
+                  }).toList();
                   final totals = _totals(users);
                   return ListView(
                     padding: const EdgeInsets.fromLTRB(20, 0, 20, 120),
                     children: [
                       _summary(totals),
-                      const SizedBox(height: 20),
-                      for (final u in filtered)
+                      const SizedBox(height: 16),
+                      _filterRow(totals.inactive),
+                      const SizedBox(height: 12),
+                      for (final u in visible)
                         Padding(
                           padding: const EdgeInsets.only(bottom: 12),
                           child: _MemberCard(
@@ -82,12 +86,12 @@ class _MembersListScreenState extends State<MembersListScreen> {
                             viewerIsPresident: me?.isPresident ?? false,
                           ),
                         ),
-                      if (filtered.isEmpty)
+                      if (visible.isEmpty)
                         Padding(
                           padding: const EdgeInsets.only(top: 40),
                           child: Center(
                             child: Text(
-                              'No members match your search.',
+                              'No members match.',
                               style: GoogleFonts.inter(
                                 color: AgaramColors.onSurfaceVariant,
                               ),
@@ -120,10 +124,13 @@ class _MembersListScreenState extends State<MembersListScreen> {
     );
   }
 
-  ({int members, int admins, int presidents}) _totals(List<AppUser> users) {
+  ({int members, int admins, int presidents, int inactive}) _totals(
+      List<AppUser> users) {
     var admins = 0;
     var presidents = 0;
+    var inactive = 0;
     for (final u in users) {
+      if (!u.active) inactive++;
       if (u.isPresident) {
         presidents++;
         admins++;
@@ -132,20 +139,21 @@ class _MembersListScreenState extends State<MembersListScreen> {
       }
     }
     return (
-      members: users.length,
+      members: users.length - inactive,
       admins: admins,
       presidents: presidents,
+      inactive: inactive,
     );
   }
 
   Widget _summary(
-    ({int members, int admins, int presidents}) totals,
+    ({int members, int admins, int presidents, int inactive}) totals,
   ) {
     return Wrap(
       spacing: 8,
       runSpacing: 8,
       children: [
-        _pill('${totals.members} members', Icons.people_alt_rounded,
+        _pill('${totals.members} active', Icons.people_alt_rounded,
             AgaramColors.secondaryContainer, AgaramColors.secondary),
         _pill('${totals.admins} admins', Icons.shield_rounded,
             AgaramColors.primaryContainer.withValues(alpha: 0.18),
@@ -154,6 +162,25 @@ class _MembersListScreenState extends State<MembersListScreen> {
             Icons.workspace_premium_rounded,
             AgaramColors.surfaceContainerLow, AgaramColors.primary),
       ],
+    );
+  }
+
+  Widget _filterRow(int inactiveCount) {
+    if (inactiveCount == 0 && !_showInactive) return const SizedBox.shrink();
+    return Align(
+      alignment: Alignment.centerLeft,
+      child: FilterChip(
+        label: Text(
+          _showInactive
+              ? 'Showing inactive ($inactiveCount)'
+              : 'Show inactive ($inactiveCount)',
+        ),
+        selected: _showInactive,
+        onSelected: (v) => setState(() => _showInactive = v),
+        backgroundColor: AgaramColors.surfaceContainerLow,
+        selectedColor: AgaramColors.secondaryContainer,
+        checkmarkColor: AgaramColors.secondary,
+      ),
     );
   }
 
@@ -190,107 +217,151 @@ class _MemberCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: AgaramColors.surfaceContainerLowest,
-        borderRadius: BorderRadius.circular(18),
-        border: user.isPresident
-            ? const Border(
-                left: BorderSide(color: AgaramColors.secondary, width: 3),
-              )
-            : null,
-      ),
-      child: Row(
-        children: [
-          CircleAvatar(
-            radius: 24,
-            backgroundColor: AgaramColors.primaryContainer,
-            backgroundImage:
-                user.photoUrl != null ? NetworkImage(user.photoUrl!) : null,
-            child: user.photoUrl == null
-                ? Text(
-                    user.name.isEmpty ? 'A' : user.name[0].toUpperCase(),
-                    style: const TextStyle(color: Colors.white),
-                  )
-                : null,
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Expanded(
-                      child: Text(
-                        user.name.isEmpty ? 'Member' : user.name,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: GoogleFonts.inter(
-                          fontSize: 15,
-                          fontWeight: FontWeight.w700,
-                          color: AgaramColors.onSurface,
+    final dim = !user.active;
+    return Opacity(
+      opacity: dim ? 0.55 : 1.0,
+      child: Container(
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          color: AgaramColors.surfaceContainerLowest,
+          borderRadius: BorderRadius.circular(18),
+          border: user.isPresident
+              ? const Border(
+                  left: BorderSide(color: AgaramColors.secondary, width: 3),
+                )
+              : null,
+        ),
+        child: Row(
+          children: [
+            CircleAvatar(
+              radius: 24,
+              backgroundColor: AgaramColors.primaryContainer,
+              backgroundImage:
+                  user.photoUrl != null ? NetworkImage(user.photoUrl!) : null,
+              child: user.photoUrl == null
+                  ? Text(
+                      user.name.isEmpty ? 'A' : user.name[0].toUpperCase(),
+                      style: const TextStyle(color: Colors.white),
+                    )
+                  : null,
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          user.name.isEmpty ? 'Member' : user.name,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: GoogleFonts.inter(
+                            fontSize: 15,
+                            fontWeight: FontWeight.w700,
+                            color: AgaramColors.onSurface,
+                          ),
                         ),
                       ),
-                    ),
-                    Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        const Icon(
-                          Icons.star_rounded,
-                          size: 14,
-                          color: AgaramColors.secondary,
-                        ),
-                        const SizedBox(width: 4),
-                        Text(
-                          user.stars.toString(),
-                          style: GoogleFonts.inter(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w700,
+                      Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(
+                            Icons.star_rounded,
+                            size: 14,
                             color: AgaramColors.secondary,
+                          ),
+                          const SizedBox(width: 4),
+                          Text(
+                            user.stars.toString(),
+                            style: GoogleFonts.inter(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w700,
+                              color: AgaramColors.secondary,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    user.email,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: GoogleFonts.inter(
+                      fontSize: 12,
+                      color: AgaramColors.onSurfaceVariant,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      RoleChip(user: user, compact: true),
+                      if (dim) ...[
+                        const SizedBox(width: 6),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 3,
+                          ),
+                          decoration: BoxDecoration(
+                            color: AgaramColors.surfaceContainerLow,
+                            borderRadius: BorderRadius.circular(999),
+                          ),
+                          child: Text(
+                            'Inactive',
+                            style: GoogleFonts.inter(
+                              fontSize: 11,
+                              fontWeight: FontWeight.w600,
+                              color: AgaramColors.onSurfaceVariant,
+                            ),
                           ),
                         ),
                       ],
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  user.email,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: GoogleFonts.inter(
-                    fontSize: 12,
-                    color: AgaramColors.onSurfaceVariant,
+                    ],
                   ),
-                ),
-                const SizedBox(height: 8),
-                RoleChip(user: user),
-              ],
-            ),
-          ),
-          if (!user.isPresident)
-            PopupMenuButton<String>(
-              icon: const Icon(
-                Icons.more_vert_rounded,
-                color: AgaramColors.onSurfaceVariant,
+                ],
               ),
-              onSelected: (value) => _handle(context, value),
-              itemBuilder: (_) => [
-                if (user.isAdmin && viewerIsPresident)
-                  const PopupMenuItem(
-                    value: 'demote',
-                    child: Text('Demote to member'),
-                  ),
-                if (!user.isAdmin)
-                  const PopupMenuItem(
-                    value: 'promote',
-                    child: Text('Promote to admin'),
-                  ),
-              ],
             ),
-        ],
+            if (!user.isPresident)
+              PopupMenuButton<String>(
+                icon: const Icon(
+                  Icons.more_vert_rounded,
+                  color: AgaramColors.onSurfaceVariant,
+                ),
+                onSelected: (value) => _handle(context, value),
+                itemBuilder: (_) => [
+                  if (user.isAdmin && viewerIsPresident)
+                    const PopupMenuItem(
+                      value: 'demote',
+                      child: Text('Demote to member'),
+                    ),
+                  if (!user.isAdmin)
+                    const PopupMenuItem(
+                      value: 'promote',
+                      child: Text('Promote to admin'),
+                    ),
+                  const PopupMenuItem(
+                    value: 'position',
+                    child: Text('Change position'),
+                  ),
+                  if (user.active)
+                    const PopupMenuItem(
+                      value: 'deactivate',
+                      child: Text('Deactivate account'),
+                    )
+                  else
+                    const PopupMenuItem(
+                      value: 'reactivate',
+                      child: Text('Reactivate account'),
+                    ),
+                ],
+              ),
+          ],
+        ),
       ),
     );
   }
@@ -300,21 +371,153 @@ class _MemberCard extends StatelessWidget {
       if (value == 'promote') {
         await MembersService.setRole(user.uid, role: 'admin');
         if (!context.mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('${user.name} is now an admin.')),
-        );
+        _toast(context, '${user.name} is now an admin.');
       } else if (value == 'demote') {
         await MembersService.setRole(user.uid, role: 'member');
         if (!context.mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('${user.name} is now a member.')),
+        _toast(context, '${user.name} is now a member.');
+      } else if (value == 'position') {
+        final picked = await _pickPosition(context);
+        if (picked == null || picked.cancelled) return;
+        await MembersService.setPosition(user.uid, position: picked.value);
+        if (!context.mounted) return;
+        _toast(
+          context,
+          '${user.name} is now ${picked.value == null ? 'unassigned' : AppPosition.label(picked.value!)}.',
         );
+      } else if (value == 'deactivate') {
+        final confirm = await _confirm(
+          context,
+          'Deactivate ${user.name}?',
+          'They will be signed out and blocked from signing back in. All their history stays. You can reactivate later.',
+          destructive: true,
+        );
+        if (confirm != true) return;
+        await MembersService.deactivate(user.uid);
+        if (!context.mounted) return;
+        _toast(context, '${user.name} has been deactivated.');
+      } else if (value == 'reactivate') {
+        await MembersService.reactivate(user.uid);
+        if (!context.mounted) return;
+        _toast(context, '${user.name} can sign in again.');
       }
     } catch (e) {
       if (!context.mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Couldn’t update: $e')),
-      );
+      _toast(context, 'Couldn’t update: $e');
     }
   }
+
+  void _toast(BuildContext context, String msg) {
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
+  }
+
+  Future<_PositionPick?> _pickPosition(BuildContext context) async {
+    return showDialog<_PositionPick>(
+      context: context,
+      builder: (ctx) {
+        String? selection = user.position;
+        return StatefulBuilder(
+          builder: (_, setState) => AlertDialog(
+            title: const Text('Change position'),
+            content: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  _positionTile(null, 'None', selection,
+                      (v) => setState(() => selection = v)),
+                  for (final p in AppPosition.all)
+                    _positionTile(
+                      p,
+                      AppPosition.label(p),
+                      selection,
+                      (v) => setState(() => selection = v),
+                    ),
+                ],
+              ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(ctx).pop(
+                  const _PositionPick.cancel(),
+                ),
+                child: const Text('Cancel'),
+              ),
+              TextButton(
+                onPressed: () => Navigator.of(ctx).pop(
+                  _PositionPick(value: selection),
+                ),
+                child: const Text('Save'),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _positionTile(
+    String? value,
+    String label,
+    String? selection,
+    ValueChanged<String?> onSelect,
+  ) {
+    return InkWell(
+      onTap: () => onSelect(value),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 4),
+        child: Row(
+          children: [
+            Icon(
+              selection == value
+                  ? Icons.radio_button_checked_rounded
+                  : Icons.radio_button_unchecked_rounded,
+              color: selection == value
+                  ? AgaramColors.primary
+                  : AgaramColors.onSurfaceVariant,
+              size: 20,
+            ),
+            const SizedBox(width: 12),
+            Text(label),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<bool?> _confirm(
+    BuildContext context,
+    String title,
+    String body, {
+    bool destructive = false,
+  }) {
+    return showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(title),
+        content: Text(body),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            style: destructive
+                ? TextButton.styleFrom(foregroundColor: AgaramColors.error)
+                : null,
+            onPressed: () => Navigator.of(ctx).pop(true),
+            child: Text(destructive ? 'Deactivate' : 'OK'),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _PositionPick {
+  final String? value;
+  final bool cancelled;
+  const _PositionPick({this.value}) : cancelled = false;
+  const _PositionPick.cancel()
+      : value = null,
+        cancelled = true;
 }
