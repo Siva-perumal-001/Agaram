@@ -16,6 +16,9 @@ class SplashScreen extends StatefulWidget {
 class _SplashScreenState extends State<SplashScreen>
     with SingleTickerProviderStateMixin {
   late final AnimationController _progressController;
+  bool _minDurationElapsed = false;
+  bool _routed = false;
+  AuthService? _auth;
 
   @override
   void initState() {
@@ -26,22 +29,37 @@ class _SplashScreenState extends State<SplashScreen>
     )..forward();
 
     _progressController.addStatusListener((status) {
-      if (status == AnimationStatus.completed) _route();
+      if (status == AnimationStatus.completed) {
+        _minDurationElapsed = true;
+        _tryRoute();
+      }
     });
   }
 
-  void _route() {
-    if (!mounted) return;
-    final auth = context.read<AuthService>();
-    if (auth.status == AuthStatus.authenticated) {
-      Navigator.of(context).pushReplacementNamed(Routes.home);
-    } else {
-      Navigator.of(context).pushReplacementNamed(Routes.login);
-    }
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _auth ??= context.read<AuthService>()..addListener(_tryRoute);
+    _tryRoute();
+  }
+
+  void _tryRoute() {
+    if (_routed || !mounted) return;
+    final auth = _auth;
+    if (auth == null) return;
+    if (!_minDurationElapsed) return;
+    if (auth.status == AuthStatus.unknown) return;
+
+    _routed = true;
+    final target = auth.status == AuthStatus.authenticated
+        ? Routes.home
+        : Routes.login;
+    Navigator.of(context).pushReplacementNamed(target);
   }
 
   @override
   void dispose() {
+    _auth?.removeListener(_tryRoute);
     _progressController.dispose();
     super.dispose();
   }
