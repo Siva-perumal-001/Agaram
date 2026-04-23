@@ -71,21 +71,13 @@ class _SplashScreenState extends State<SplashScreen>
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   const Spacer(),
-                  Text(
-                    'அ',
-                    style: AgaramTheme.tamilSerif(fontSize: 140),
+                  Image.asset(
+                    'assets/icon/agaram_logo.png',
+                    width: 280,
+                    height: 280,
+                    fit: BoxFit.contain,
                   ),
                   const SizedBox(height: 8),
-                  Text(
-                    'AGARAM',
-                    style: GoogleFonts.inter(
-                      fontSize: 22,
-                      fontWeight: FontWeight.w700,
-                      letterSpacing: 6,
-                      color: AgaramColors.onSurface,
-                    ),
-                  ),
-                  const SizedBox(height: 10),
                   Text(
                     'Tamil Ilakiya Mandram',
                     style: GoogleFonts.inter(
