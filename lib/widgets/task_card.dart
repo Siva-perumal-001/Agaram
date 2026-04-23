@@ -134,14 +134,14 @@ class TaskCard extends StatelessWidget {
       return Row(
         children: [
           const Icon(Icons.check_circle_rounded,
-              size: 16, color: Color(0xFF2E7D32)),
+              size: 16, color: AgaramColors.success),
           const SizedBox(width: 6),
           Text(
             'Approved +${task.starsAwarded} stars',
             style: GoogleFonts.inter(
               fontSize: 13,
               fontWeight: FontWeight.w600,
-              color: const Color(0xFF2E7D32),
+              color: AgaramColors.success,
             ),
           ),
           const Spacer(),

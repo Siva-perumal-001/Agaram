@@ -128,7 +128,7 @@ class NotificationCard extends StatelessWidget {
       case AppNotificationKind.task:
         return (Icons.task_alt_rounded, AgaramColors.secondary);
       case AppNotificationKind.announcement:
-        return (Icons.campaign_rounded, const Color(0xFF6C4BB6));
+        return (Icons.campaign_rounded, AgaramColors.info);
     }
   }
 

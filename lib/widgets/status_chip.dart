@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
+import '../core/theme.dart';
 import '../models/task.dart';
 
 class StatusChip extends StatelessWidget {
@@ -40,13 +41,13 @@ class StatusChip extends StatelessWidget {
   (String, Color, Color) _styles() {
     switch (status) {
       case TaskStatus.pending:
-        return ('Pending', const Color(0xFFEFE7E6), const Color(0xFF58413F));
+        return ('Pending', AgaramColors.neutralContainer, AgaramColors.onSurfaceVariant);
       case TaskStatus.submitted:
-        return ('Submitted', const Color(0xFFFEF3D0), const Color(0xFF795900));
+        return ('Submitted', AgaramColors.warningContainer, AgaramColors.warning);
       case TaskStatus.approved:
-        return ('Approved', const Color(0xFFDDF2E3), const Color(0xFF2E7D32));
+        return ('Approved', AgaramColors.successContainer, AgaramColors.success);
       case TaskStatus.rejected:
-        return ('Needs rework', const Color(0xFFFCE4E1), const Color(0xFFBA1A1A));
+        return ('Needs rework', AgaramColors.errorContainer, AgaramColors.error);
     }
   }
 }

@@ -12,7 +12,7 @@ class RoleChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final (label, bg, fg, border, trailing, icon) = _styles();
+    final (label, bg, fg, border, icon) = _styles();
     final padH = compact ? 10.0 : 16.0;
     final padV = compact ? 4.0 : 8.0;
     final fontSize = compact ? 11.0 : 13.0;
@@ -31,7 +31,7 @@ class RoleChip extends StatelessWidget {
             SizedBox(width: padH * 0.4),
           ],
           Text(
-            '$label$trailing',
+            label,
             style: GoogleFonts.inter(
               fontSize: fontSize,
               fontWeight: FontWeight.w600,
@@ -43,7 +43,7 @@ class RoleChip extends StatelessWidget {
     );
   }
 
-  (String, Color, Color, BoxBorder?, String, IconData?) _styles() {
+  (String, Color, Color, BoxBorder?, IconData?) _styles() {
     final pos = user.position;
     final effectivePresident = user.isPresident || pos == AppPosition.president;
 
@@ -53,8 +53,7 @@ class RoleChip extends StatelessWidget {
         AgaramColors.primaryContainer,
         Colors.white,
         null,
-        ' 👑',
-        null,
+        Icons.workspace_premium_rounded,
       );
     }
     if (pos == AppPosition.vicePresident) {
@@ -63,7 +62,6 @@ class RoleChip extends StatelessWidget {
         AgaramColors.primary,
         Colors.white,
         null,
-        '',
         Icons.star_rounded,
       );
     }
@@ -73,7 +71,6 @@ class RoleChip extends StatelessWidget {
         AgaramColors.secondaryContainer,
         AgaramColors.secondary,
         null,
-        '',
         Icons.edit_note_rounded,
       );
     }
@@ -83,27 +80,24 @@ class RoleChip extends StatelessWidget {
         AgaramColors.secondaryContainer.withValues(alpha: 0.6),
         AgaramColors.secondary,
         null,
-        '',
         Icons.edit_note_rounded,
       );
     }
     if (pos == AppPosition.treasurer) {
       return (
         'Treasurer',
-        const Color(0xFFDDF2E3),
-        const Color(0xFF2E7D32),
+        AgaramColors.successContainer,
+        AgaramColors.success,
         null,
-        '',
         Icons.account_balance_wallet_rounded,
       );
     }
     if (pos == AppPosition.jointTreasurer) {
       return (
         'Joint Treasurer',
-        const Color(0xFFDDF2E3).withValues(alpha: 0.65),
-        const Color(0xFF2E7D32),
+        AgaramColors.successContainer.withValues(alpha: 0.65),
+        AgaramColors.success,
         null,
-        '',
         Icons.account_balance_wallet_rounded,
       );
     }
@@ -113,7 +107,6 @@ class RoleChip extends StatelessWidget {
         AgaramColors.secondaryContainer,
         AgaramColors.secondary,
         null,
-        '',
         Icons.shield_rounded,
       );
     }
@@ -122,7 +115,6 @@ class RoleChip extends StatelessWidget {
       Colors.transparent,
       AgaramColors.primary,
       Border.all(color: AgaramColors.primary, width: 1.2),
-      '',
       null,
     );
   }
