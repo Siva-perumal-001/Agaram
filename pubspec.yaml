@@ -18,6 +18,16 @@ dependencies:
   google_fonts: ^6.2.1
   provider: ^6.1.2
 
+  cloudinary_public: ^0.23.1
+  image_picker: ^1.1.2
+  file_picker: ^8.1.2
+  cached_network_image: ^3.4.1
+  intl: ^0.19.0
+
+  qr_flutter: ^4.1.0
+  mobile_scanner: ^5.2.3
+  uuid: ^4.5.1
+
 dev_dependencies:
   flutter_test:
     sdk: flutter
