@@ -1,9 +1,12 @@
+import 'dart:async';
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
 
 import '../models/app_user.dart';
 import 'fcm_service.dart';
+import 'reminder_service.dart';
 
 enum AuthStatus { unknown, unauthenticated, authenticated }
 
@@ -32,6 +35,7 @@ class AuthService extends ChangeNotifier {
       } catch (_) {
         // topic unsubscribe is best-effort.
       }
+      unawaited(ReminderService.cancelAll());
       notifyListeners();
       return;
     }
@@ -43,6 +47,8 @@ class AuthService extends ChangeNotifier {
       } else {
         await FcmService.subscribeForMember(firebaseUser.uid);
       }
+      // Refresh local event reminders for the freshly signed-in member.
+      unawaited(ReminderService.syncUpcoming());
     } catch (e) {
       await _auth.signOut();
       _currentUser = null;
