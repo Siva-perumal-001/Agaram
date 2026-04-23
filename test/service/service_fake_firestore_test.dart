@@ -18,11 +18,11 @@ import 'package:agaram/models/app_notification.dart';
 import 'package:agaram/models/task.dart';
 import 'package:agaram/models/wallet_doc.dart';
 
-const MEMBER = 'member_uid';
-const OTHER_MEMBER = 'other_uid';
-const ADMIN = 'admin_uid';
-const EVENT_ID = 'evt_one';
-const QR_SECRET = 'qr-secret-deadbeef';
+const kMember = 'member_uid';
+const kOtherMember = 'other_uid';
+const kAdmin = 'admin_uid';
+const kEventId = 'evt_one';
+const kQrSecret = 'qr-secret-deadbeef';
 
 Future<FakeFirebaseFirestore> _freshDb({
   Map<String, dynamic>? eventOverrides,
@@ -30,7 +30,7 @@ Future<FakeFirebaseFirestore> _freshDb({
 }) async {
   final db = FakeFirebaseFirestore();
   if (withUser) {
-    await db.collection('users').doc(MEMBER).set({
+    await db.collection('users').doc(kMember).set({
       'name': 'Mem',
       'email': 'm@x',
       'role': 'member',
@@ -38,7 +38,7 @@ Future<FakeFirebaseFirestore> _freshDb({
       'stars': 0,
       'isPresident': false,
     });
-    await db.collection('users').doc(ADMIN).set({
+    await db.collection('users').doc(kAdmin).set({
       'name': 'Admin',
       'email': 'a@x',
       'role': 'admin',
@@ -47,7 +47,7 @@ Future<FakeFirebaseFirestore> _freshDb({
       'isPresident': false,
     });
   }
-  await db.collection('events').doc(EVENT_ID).set({
+  await db.collection('events').doc(kEventId).set({
     'title': 'Welcome Meet',
     'description': '',
     'venue': 'Auditorium',
@@ -55,8 +55,8 @@ Future<FakeFirebaseFirestore> _freshDb({
     'durationMinutes': 120,
     'status': 'ongoing',
     'kind': 'event',
-    'createdBy': ADMIN,
-    'qrSecret': QR_SECRET,
+    'createdBy': kAdmin,
+    'qrSecret': kQrSecret,
     'tasksCount': 0,
     ...?eventOverrides,
   });
@@ -84,26 +84,26 @@ void main() {
     test('happy path writes attendance with qrSecretUsed', () async {
       final db = await _freshDb();
       await AttendanceService.checkInWithQr(
-        payload: AttendanceQrPayload(eventId: EVENT_ID, secret: QR_SECRET),
-        memberUid: MEMBER,
+        payload: AttendanceQrPayload(eventId: kEventId, secret: kQrSecret),
+        memberUid: kMember,
         memberName: 'Mem',
       );
       final snap = await db
-          .collection('events').doc(EVENT_ID)
-          .collection('attendance').doc(MEMBER).get();
+          .collection('events').doc(kEventId)
+          .collection('attendance').doc(kMember).get();
       expect(snap.exists, isTrue);
-      expect(snap.data()?['qrSecretUsed'], QR_SECRET);
+      expect(snap.data()?['qrSecretUsed'], kQrSecret);
       expect(snap.data()?['method'], 'qr');
       expect(snap.data()?['starsAwarded'], 2);
-      expect(snap.data()?['userId'], MEMBER);
+      expect(snap.data()?['userId'], kMember);
     });
 
     test('rejects when event missing', () async {
       await _freshDb();
       expect(
         () => AttendanceService.checkInWithQr(
-          payload: AttendanceQrPayload(eventId: 'ghost', secret: QR_SECRET),
-          memberUid: MEMBER,
+          payload: AttendanceQrPayload(eventId: 'ghost', secret: kQrSecret),
+          memberUid: kMember,
           memberName: 'Mem',
         ),
         throwsA(isA<AttendanceException>()),
@@ -114,8 +114,8 @@ void main() {
       await _freshDb(eventOverrides: {'qrSecret': ''});
       expect(
         () => AttendanceService.checkInWithQr(
-          payload: AttendanceQrPayload(eventId: EVENT_ID, secret: QR_SECRET),
-          memberUid: MEMBER,
+          payload: AttendanceQrPayload(eventId: kEventId, secret: kQrSecret),
+          memberUid: kMember,
           memberName: 'Mem',
         ),
         throwsA(isA<AttendanceException>()),
@@ -127,8 +127,8 @@ void main() {
       expect(
         () => AttendanceService.checkInWithQr(
           payload:
-              AttendanceQrPayload(eventId: EVENT_ID, secret: 'stale-secret'),
-          memberUid: MEMBER,
+              AttendanceQrPayload(eventId: kEventId, secret: 'stale-secret'),
+          memberUid: kMember,
           memberName: 'Mem',
         ),
         throwsA(isA<AttendanceException>()),
@@ -141,8 +141,8 @@ void main() {
       });
       expect(
         () => AttendanceService.checkInWithQr(
-          payload: AttendanceQrPayload(eventId: EVENT_ID, secret: QR_SECRET),
-          memberUid: MEMBER,
+          payload: AttendanceQrPayload(eventId: kEventId, secret: kQrSecret),
+          memberUid: kMember,
           memberName: 'Mem',
         ),
         throwsA(isA<AttendanceException>()),
@@ -157,8 +157,8 @@ void main() {
       });
       expect(
         () => AttendanceService.checkInWithQr(
-          payload: AttendanceQrPayload(eventId: EVENT_ID, secret: QR_SECRET),
-          memberUid: MEMBER,
+          payload: AttendanceQrPayload(eventId: kEventId, secret: kQrSecret),
+          memberUid: kMember,
           memberName: 'Mem',
         ),
         throwsA(isA<AttendanceException>()),
@@ -168,14 +168,14 @@ void main() {
     test('double-scan for same member is rejected', () async {
       await _freshDb();
       await AttendanceService.checkInWithQr(
-        payload: AttendanceQrPayload(eventId: EVENT_ID, secret: QR_SECRET),
-        memberUid: MEMBER,
+        payload: AttendanceQrPayload(eventId: kEventId, secret: kQrSecret),
+        memberUid: kMember,
         memberName: 'Mem',
       );
       expect(
         () => AttendanceService.checkInWithQr(
-          payload: AttendanceQrPayload(eventId: EVENT_ID, secret: QR_SECRET),
-          memberUid: MEMBER,
+          payload: AttendanceQrPayload(eventId: kEventId, secret: kQrSecret),
+          memberUid: kMember,
           memberName: 'Mem',
         ),
         throwsA(isA<AttendanceException>()),
@@ -185,11 +185,11 @@ void main() {
     test('does NOT bump user.stars on member-side write (FND-02)', () async {
       final db = await _freshDb();
       await AttendanceService.checkInWithQr(
-        payload: AttendanceQrPayload(eventId: EVENT_ID, secret: QR_SECRET),
-        memberUid: MEMBER,
+        payload: AttendanceQrPayload(eventId: kEventId, secret: kQrSecret),
+        memberUid: kMember,
         memberName: 'Mem',
       );
-      final user = await db.collection('users').doc(MEMBER).get();
+      final user = await db.collection('users').doc(kMember).get();
       expect(user.data()?['stars'], 0,
           reason: 'Self-stars writes are blocked by FND-02; stars stay 0 '
               'until admin reconciliation.');
@@ -200,26 +200,26 @@ void main() {
     test('admin path writes attendance + bumps user.stars by 2', () async {
       final db = await _freshDb();
       await AttendanceService.markManual(
-        eventId: EVENT_ID,
-        memberUid: MEMBER,
+        eventId: kEventId,
+        memberUid: kMember,
         memberName: 'Mem',
       );
       final att = await db
-          .collection('events').doc(EVENT_ID)
-          .collection('attendance').doc(MEMBER).get();
+          .collection('events').doc(kEventId)
+          .collection('attendance').doc(kMember).get();
       expect(att.data()?['method'], 'manual');
       expect(att.data()?['starsAwarded'], 2);
-      final user = await db.collection('users').doc(MEMBER).get();
+      final user = await db.collection('users').doc(kMember).get();
       expect(user.data()?['stars'], 2);
     });
 
     test('rejects if member user doc missing', () async {
       final db = await _freshDb();
-      await db.collection('users').doc(MEMBER).delete();
+      await db.collection('users').doc(kMember).delete();
       expect(
         () => AttendanceService.markManual(
-          eventId: EVENT_ID,
-          memberUid: MEMBER,
+          eventId: kEventId,
+          memberUid: kMember,
           memberName: 'Mem',
         ),
         throwsA(isA<AttendanceException>()),
@@ -229,12 +229,12 @@ void main() {
     test('rejects deactivated user (FND-17)', () async {
       final db = await _freshDb();
       await db
-          .collection('users').doc(MEMBER)
+          .collection('users').doc(kMember)
           .update({'active': false});
       expect(
         () => AttendanceService.markManual(
-          eventId: EVENT_ID,
-          memberUid: MEMBER,
+          eventId: kEventId,
+          memberUid: kMember,
           memberName: 'Mem',
         ),
         throwsA(isA<AttendanceException>()),
@@ -244,14 +244,14 @@ void main() {
     test('double-mark rejected', () async {
       await _freshDb();
       await AttendanceService.markManual(
-        eventId: EVENT_ID,
-        memberUid: MEMBER,
+        eventId: kEventId,
+        memberUid: kMember,
         memberName: 'Mem',
       );
       expect(
         () => AttendanceService.markManual(
-          eventId: EVENT_ID,
-          memberUid: MEMBER,
+          eventId: kEventId,
+          memberUid: kMember,
           memberName: 'Mem',
         ),
         throwsA(isA<AttendanceException>()),
@@ -266,50 +266,50 @@ void main() {
     test('creates task doc with pending status + 0 stars', () async {
       final db = await _freshDb();
       final ref = await EventService.addTask(
-        eventId: EVENT_ID,
+        eventId: kEventId,
         eventTitle: 'Welcome Meet',
         title: 'Bring banner',
         description: 'please',
-        assignedTo: MEMBER,
+        assignedTo: kMember,
         assignedToName: 'Mem',
       );
       final snap = await db
-          .collection('events').doc(EVENT_ID)
+          .collection('events').doc(kEventId)
           .collection('tasks').doc(ref.id).get();
       expect(snap.exists, isTrue);
       expect(snap.data()?['status'], 'pending');
       expect(snap.data()?['starsAwarded'], 0);
-      expect(snap.data()?['assignedTo'], MEMBER);
+      expect(snap.data()?['assignedTo'], kMember);
     });
 
     test('increments event.tasksCount by exactly 1', () async {
       final db = await _freshDb();
       await db
-          .collection('events').doc(EVENT_ID)
+          .collection('events').doc(kEventId)
           .update({'tasksCount': 3});
       await EventService.addTask(
-        eventId: EVENT_ID,
+        eventId: kEventId,
         eventTitle: 'Welcome Meet',
         title: 't', description: '',
-        assignedTo: MEMBER, assignedToName: 'Mem',
+        assignedTo: kMember, assignedToName: 'Mem',
       );
-      final ev = await db.collection('events').doc(EVENT_ID).get();
+      final ev = await db.collection('events').doc(kEventId).get();
       expect(ev.data()?['tasksCount'], 4);
     });
   });
 
   group('EventService.approveTask', () {
-    Future<String> _seedTask(
+    Future<String> seedTask(
       FakeFirebaseFirestore db, {
       String status = 'submitted',
       int currentStars = 0,
     }) async {
-      await db.collection('users').doc(MEMBER).update({'stars': currentStars});
+      await db.collection('users').doc(kMember).update({'stars': currentStars});
       final ref = await db
-          .collection('events').doc(EVENT_ID)
+          .collection('events').doc(kEventId)
           .collection('tasks').add({
         'title': 'Bring banner',
-        'assignedTo': MEMBER,
+        'assignedTo': kMember,
         'assignedToName': 'Mem',
         'status': status,
         'starsAwarded': 0,
@@ -319,37 +319,37 @@ void main() {
 
     test('approval flips status + bumps user.stars by 3', () async {
       final db = await _freshDb();
-      final taskId = await _seedTask(db, currentStars: 4);
+      final taskId = await seedTask(db, currentStars: 4);
       await EventService.approveTask(
-        eventId: EVENT_ID,
+        eventId: kEventId,
         taskId: taskId,
-        reviewerUid: ADMIN,
-        memberUid: MEMBER,
+        reviewerUid: kAdmin,
+        memberUid: kMember,
         reviewNote: 'great',
       );
       final task = await db
-          .collection('events').doc(EVENT_ID)
+          .collection('events').doc(kEventId)
           .collection('tasks').doc(taskId).get();
       expect(task.data()?['status'], 'approved');
       expect(task.data()?['starsAwarded'], 3);
-      expect(task.data()?['reviewedBy'], ADMIN);
+      expect(task.data()?['reviewedBy'], kAdmin);
 
-      final user = await db.collection('users').doc(MEMBER).get();
+      final user = await db.collection('users').doc(kMember).get();
       expect(user.data()?['stars'], 7);
     });
 
     test('is idempotent — re-approving already-approved task does nothing',
         () async {
       final db = await _freshDb();
-      final taskId = await _seedTask(db, status: 'approved', currentStars: 10);
+      final taskId = await seedTask(db, status: 'approved', currentStars: 10);
       await EventService.approveTask(
-        eventId: EVENT_ID,
+        eventId: kEventId,
         taskId: taskId,
-        reviewerUid: ADMIN,
-        memberUid: MEMBER,
+        reviewerUid: kAdmin,
+        memberUid: kMember,
         reviewNote: 'retry',
       );
-      final user = await db.collection('users').doc(MEMBER).get();
+      final user = await db.collection('users').doc(kMember).get();
       expect(user.data()?['stars'], 10,
           reason: 'idempotent guard at event_service.dart:151 prevents double-award');
     });
@@ -358,10 +358,10 @@ void main() {
       await _freshDb();
       expect(
         () => EventService.approveTask(
-          eventId: EVENT_ID,
+          eventId: kEventId,
           taskId: 'ghost',
-          reviewerUid: ADMIN,
-          memberUid: MEMBER,
+          reviewerUid: kAdmin,
+          memberUid: kMember,
         ),
         throwsA(isA<Exception>()),
       );
@@ -371,30 +371,30 @@ void main() {
   group('EventService.rejectTask (FND-14 transactional)', () {
     test('flips to rejected + starsAwarded=0, no stars change', () async {
       final db = await _freshDb();
-      await db.collection('users').doc(MEMBER).update({'stars': 5});
+      await db.collection('users').doc(kMember).update({'stars': 5});
       final taskRef = await db
-          .collection('events').doc(EVENT_ID)
+          .collection('events').doc(kEventId)
           .collection('tasks').add({
         'title': 'Bring banner',
-        'assignedTo': MEMBER,
+        'assignedTo': kMember,
         'status': 'submitted',
         'starsAwarded': 0,
       });
       await EventService.rejectTask(
-        eventId: EVENT_ID,
+        eventId: kEventId,
         taskId: taskRef.id,
-        reviewerUid: ADMIN,
+        reviewerUid: kAdmin,
         reviewNote: 'needs more detail',
       );
       final task = await db
-          .collection('events').doc(EVENT_ID)
+          .collection('events').doc(kEventId)
           .collection('tasks').doc(taskRef.id).get();
       expect(task.data()?['status'], 'rejected');
       expect(task.data()?['reviewNote'], 'needs more detail');
-      expect(task.data()?['reviewedBy'], ADMIN);
+      expect(task.data()?['reviewedBy'], kAdmin);
       expect(task.data()?['starsAwarded'], 0);
 
-      final user = await db.collection('users').doc(MEMBER).get();
+      final user = await db.collection('users').doc(kMember).get();
       expect(user.data()?['stars'], 5, reason: 'reject does not award stars');
     });
 
@@ -402,9 +402,9 @@ void main() {
       await _freshDb();
       expect(
         () => EventService.rejectTask(
-          eventId: EVENT_ID,
+          eventId: kEventId,
           taskId: 'ghost',
-          reviewerUid: ADMIN,
+          reviewerUid: kAdmin,
           reviewNote: 'no',
         ),
         throwsA(isA<Exception>()),
@@ -417,44 +417,44 @@ void main() {
         () async {
       final db = await _freshDb();
       final taskRef = await db
-          .collection('events').doc(EVENT_ID)
+          .collection('events').doc(kEventId)
           .collection('tasks').add({
         'title': 'Bring banner',
-        'assignedTo': MEMBER,
+        'assignedTo': kMember,
         'status': 'rejected',
         'reviewNote': 'Please add caption', // leftover from previous review
-        'reviewedBy': ADMIN,
+        'reviewedBy': kAdmin,
       });
       await EventService.submitProof(
-        eventId: EVENT_ID,
+        eventId: kEventId,
         taskId: taskRef.id,
         proofUrl: 'https://res.cloudinary.com/dttox49ht/x.jpg',
         proofType: ProofType.image,
         memberNote: 'done',
       );
       final snap = await db
-          .collection('events').doc(EVENT_ID)
+          .collection('events').doc(kEventId)
           .collection('tasks').doc(taskRef.id).get();
       expect(snap.data()?['status'], 'submitted');
       expect(snap.data()?['proofUrl'], contains('cloudinary'));
       expect(snap.data()?['memberNote'], 'done');
       // FND-03 fix: review metadata is NOT re-written by member
       expect(snap.data()?['reviewNote'], 'Please add caption');
-      expect(snap.data()?['reviewedBy'], ADMIN);
+      expect(snap.data()?['reviewedBy'], kAdmin);
     });
   });
 
   group('EventService.deleteEvent (FND-06 cascade)', () {
     test('removes event AND every child subcollection doc', () async {
       final db = await _freshDb();
-      final eventRef = db.collection('events').doc(EVENT_ID);
+      final eventRef = db.collection('events').doc(kEventId);
       await eventRef.collection('tasks').add({'title': 'a'});
       await eventRef.collection('tasks').add({'title': 'b'});
-      await eventRef.collection('attendance').doc(MEMBER).set({'userId': MEMBER});
+      await eventRef.collection('attendance').doc(kMember).set({'userId': kMember});
       await eventRef.collection('gallery').add({'url': 'x'});
       await eventRef.collection('wallet').add({'url': 'y', 'type': 'pdf'});
 
-      await EventService.deleteEvent(EVENT_ID);
+      await EventService.deleteEvent(kEventId);
 
       expect((await eventRef.get()).exists, isFalse);
       expect(
@@ -468,11 +468,11 @@ void main() {
 
     test('paginates past the 400-doc batch limit', () async {
       final db = await _freshDb();
-      final eventRef = db.collection('events').doc(EVENT_ID);
+      final eventRef = db.collection('events').doc(kEventId);
       for (var i = 0; i < 420; i++) {
         await eventRef.collection('tasks').add({'title': 'T$i'});
       }
-      await EventService.deleteEvent(EVENT_ID);
+      await EventService.deleteEvent(kEventId);
       expect(
           (await eventRef.collection('tasks').get()).docs, isEmpty);
     }, timeout: const Timeout(Duration(seconds: 30)));
@@ -484,14 +484,14 @@ void main() {
   group('WalletService.addDoc counter math', () {
     test('PDF add increments walletCounts.pdfs atomically', () async {
       final db = await _freshDb();
-      final eventRef = db.collection('events').doc(EVENT_ID);
+      final eventRef = db.collection('events').doc(kEventId);
       // addDoc uploads to Cloudinary first, which we can't do in a unit test.
       // Instead exercise the counter-update half directly via a tx that
       // matches the shape of WalletService.addDoc's transaction.
       await db.runTransaction((tx) async {
         tx.set(
           eventRef.collection('wallet').doc('d1'),
-          {'type': 'pdf', 'uploadedBy': MEMBER},
+          {'type': 'pdf', 'uploadedBy': kMember},
         );
         tx.set(
           eventRef,
@@ -517,16 +517,16 @@ void main() {
       // walletCounts field written). The counter math itself is proven by
       // the rules suite + Layer 3 integration on a real emulator.
       final db = await _freshDb();
-      final eventRef = db.collection('events').doc(EVENT_ID);
+      final eventRef = db.collection('events').doc(kEventId);
       final walletRef = await eventRef.collection('wallet').add({
-        'type': 'pdf', 'uploadedBy': MEMBER,
+        'type': 'pdf', 'uploadedBy': kMember,
       });
       final doc = WalletDoc(
-        id: walletRef.id, eventId: EVENT_ID, eventTitle: 'x', title: 't',
-        url: 'u', type: WalletDocType.pdf, uploadedBy: MEMBER,
+        id: walletRef.id, eventId: kEventId, eventTitle: 'x', title: 't',
+        url: 'u', type: WalletDocType.pdf, uploadedBy: kMember,
         uploadedByName: 'Mem', fileName: 'f.pdf', sizeBytes: 1,
       );
-      await WalletService.deleteDoc(eventId: EVENT_ID, doc: doc);
+      await WalletService.deleteDoc(eventId: kEventId, doc: doc);
       expect(
         (await eventRef.collection('wallet').doc(walletRef.id).get()).exists,
         isFalse,
@@ -542,15 +542,15 @@ void main() {
     test('image delete also touches walletCounts in the same transaction',
         () async {
       final db = await _freshDb();
-      final eventRef = db.collection('events').doc(EVENT_ID);
+      final eventRef = db.collection('events').doc(kEventId);
       final walletRef = await eventRef.collection('wallet').add({
-        'type': 'image', 'uploadedBy': MEMBER,
+        'type': 'image', 'uploadedBy': kMember,
       });
       await WalletService.deleteDoc(
-        eventId: EVENT_ID,
+        eventId: kEventId,
         doc: WalletDoc(
-          id: walletRef.id, eventId: EVENT_ID, eventTitle: 'x', title: 't',
-          url: 'u', type: WalletDocType.image, uploadedBy: MEMBER,
+          id: walletRef.id, eventId: kEventId, eventTitle: 'x', title: 't',
+          url: 'u', type: WalletDocType.image, uploadedBy: kMember,
           uploadedByName: 'Mem', fileName: 'f.jpg', sizeBytes: 1,
         ),
       );
@@ -574,15 +574,15 @@ void main() {
         body: 'b',
         kind: AppNotificationKind.announcement,
         topic: 'all_members',
-        sentBy: ADMIN,
+        sentBy: kAdmin,
         sentByName: 'Admin',
-        eventId: EVENT_ID,
+        eventId: kEventId,
       );
       final snap = await db.collection('notifications').doc(id).get();
       expect(snap.exists, isTrue);
       expect(snap.data()?['title'], 'hi');
       expect(snap.data()?['kind'], 'announcement');
-      expect(snap.data()?['eventId'], EVENT_ID);
+      expect(snap.data()?['eventId'], kEventId);
       expect(snap.data()?['taskId'], isNull);
     });
   });
@@ -590,8 +590,8 @@ void main() {
   group('NotificationsService.markAllRead', () {
     test('sets lastReadNotificationsAt on user doc (merge)', () async {
       final db = await _freshDb();
-      await NotificationsService.markAllRead(MEMBER);
-      final u = await db.collection('users').doc(MEMBER).get();
+      await NotificationsService.markAllRead(kMember);
+      final u = await db.collection('users').doc(kMember).get();
       expect(u.data()?['lastReadNotificationsAt'], isA<Timestamp>());
       // existing fields preserved
       expect(u.data()?['name'], 'Mem');
@@ -599,11 +599,11 @@ void main() {
   });
 
   group('NotificationsService.unreadCount (FND-22)', () {
-    Future<void> _seedNotifs(FakeFirebaseFirestore db, List<DateTime> times) async {
+    Future<void> seedNotifs(FakeFirebaseFirestore db, List<DateTime> times) async {
       for (final t in times) {
         await db.collection('notifications').add({
           'title': 't', 'body': 'b', 'kind': 'announcement',
-          'topic': 'all_members', 'sentBy': ADMIN, 'sentByName': 'Admin',
+          'topic': 'all_members', 'sentBy': kAdmin, 'sentByName': 'Admin',
           'sentAt': Timestamp.fromDate(t),
         });
       }
@@ -611,42 +611,42 @@ void main() {
 
     test('returns 0 when no notifications', () async {
       await _freshDb();
-      final count = await NotificationsService.unreadCount(MEMBER).first;
+      final count = await NotificationsService.unreadCount(kMember).first;
       expect(count, 0);
     });
 
     test('counts all notifications when lastRead is null', () async {
       final db = await _freshDb();
-      await _seedNotifs(db, [
+      await seedNotifs(db, [
         DateTime(2026, 4, 1),
         DateTime(2026, 4, 5),
         DateTime(2026, 4, 10),
       ]);
-      final count = await NotificationsService.unreadCount(MEMBER).first;
+      final count = await NotificationsService.unreadCount(kMember).first;
       expect(count, 3);
     });
 
     test('counts only notifications after lastReadNotificationsAt', () async {
       final db = await _freshDb();
-      await db.collection('users').doc(MEMBER).update({
+      await db.collection('users').doc(kMember).update({
         'lastReadNotificationsAt': Timestamp.fromDate(DateTime(2026, 4, 5)),
       });
-      await _seedNotifs(db, [
+      await seedNotifs(db, [
         DateTime(2026, 4, 1), // before lastRead
         DateTime(2026, 4, 5), // at lastRead (strictly after only)
         DateTime(2026, 4, 6), // after
         DateTime(2026, 4, 10), // after
       ]);
-      final count = await NotificationsService.unreadCount(MEMBER).first;
+      final count = await NotificationsService.unreadCount(kMember).first;
       expect(count, 2);
     });
 
     test('handles >50 unread without capping (FND-22 fix)', () async {
       final db = await _freshDb();
       final now = DateTime(2026, 4, 1);
-      await _seedNotifs(
+      await seedNotifs(
           db, List.generate(75, (i) => now.add(Duration(minutes: i))));
-      final count = await NotificationsService.unreadCount(MEMBER).first;
+      final count = await NotificationsService.unreadCount(kMember).first;
       expect(count, 75,
           reason: '.count() aggregate is not bounded by limit(50).');
     });
