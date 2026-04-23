@@ -35,7 +35,7 @@ lib/
 - [x] **Phase 1** — Foundation & Auth (Splash, Login, Forgot Password)
 - [x] **Phase 2** — Home, Profile, Events list, Kural of the Day, Monthly theme banner, bottom nav
 - [x] **Phase 3** — Events & Tasks: event CRUD, banner upload (Cloudinary), task assign + proof upload (image/PDF), admin review queue with approve/reject, auto-award stars on approval
-- [ ] **Phase 4** — Attendance (QR) + Event Gallery
+- [x] **Phase 4** — Attendance via rotating QR (admin shows, member scans, +2 stars tx) + Event gallery grid + photo lightbox + admin manual mark
 - [ ] **Phase 5** — Notifications, Members, Leaderboard
 - [ ] **Phase 6** — Polish & APK release
 
