@@ -8,6 +8,7 @@ import '../../core/members_service.dart';
 import '../../core/theme.dart';
 import '../../models/app_user.dart';
 import '../../widgets/role_chip.dart';
+import '../../widgets/stream_error_view.dart';
 import 'add_member_sheet.dart';
 
 class MembersListScreen extends StatefulWidget {
@@ -58,6 +59,11 @@ class _MembersListScreenState extends State<MembersListScreen> {
               child: StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
                 stream: stream,
                 builder: (_, snap) {
+                  if (snap.hasError) {
+                    return const StreamErrorView(
+                      message: "Couldn't load members.",
+                    );
+                  }
                   if (snap.connectionState == ConnectionState.waiting) {
                     return const Center(child: CircularProgressIndicator());
                   }

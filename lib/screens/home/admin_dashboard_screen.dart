@@ -91,23 +91,35 @@ class AdminDashboardScreen extends StatelessWidget {
     final name = user.isPresident
         ? 'President'
         : (user.name.isEmpty ? 'Admin' : user.name.split(' ').first);
+    final greetingStyle = GoogleFonts.inter(
+      fontSize: 28,
+      fontWeight: FontWeight.w700,
+      color: AgaramColors.onSurface,
+      height: 1.2,
+    );
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Row(
-          children: [
-            Text(
-              'Vanakkam, $name',
-              style: GoogleFonts.inter(
-                fontSize: 30,
-                fontWeight: FontWeight.w700,
-                color: AgaramColors.onSurface,
-                height: 1.2,
-              ),
-            ),
-            const SizedBox(width: 8),
-            const Text('👑', style: TextStyle(fontSize: 28)),
-          ],
+        Text.rich(
+          TextSpan(
+            style: greetingStyle,
+            children: [
+              TextSpan(text: 'Vanakkam, $name'),
+              if (user.isPresident) ...[
+                const TextSpan(text: '  '),
+                WidgetSpan(
+                  alignment: PlaceholderAlignment.middle,
+                  child: Icon(
+                    Icons.workspace_premium_rounded,
+                    size: 26,
+                    color: AgaramColors.secondary,
+                  ),
+                ),
+              ],
+            ],
+          ),
+          maxLines: 2,
+          overflow: TextOverflow.ellipsis,
         ),
         const SizedBox(height: 10),
         Container(

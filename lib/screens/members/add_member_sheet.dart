@@ -234,7 +234,7 @@ class _AddMemberSheetState extends State<AddMemberSheet> {
             ],
           ),
           const SizedBox(height: 24),
-          ElevatedButton(
+          FilledButton(
             onPressed: _saving ? null : _save,
             child: _saving
                 ? const SizedBox(
@@ -263,13 +263,13 @@ class _AddMemberSheetState extends State<AddMemberSheet> {
             height: 84,
             width: 84,
             decoration: const BoxDecoration(
-              color: Color(0xFFDDF2E3),
+              color: AgaramColors.successContainer,
               shape: BoxShape.circle,
             ),
             child: const Icon(
               Icons.person_add_alt_1_rounded,
               size: 40,
-              color: Color(0xFF2E7D32),
+              color: AgaramColors.success,
             ),
           ),
         ),
@@ -280,7 +280,7 @@ class _AddMemberSheetState extends State<AddMemberSheet> {
             style: GoogleFonts.inter(
               fontSize: 22,
               fontWeight: FontWeight.w700,
-              color: const Color(0xFF1B5E20),
+              color: AgaramColors.successDark,
             ),
           ),
         ),
@@ -299,10 +299,10 @@ class _AddMemberSheetState extends State<AddMemberSheet> {
         Container(
           padding: const EdgeInsets.all(14),
           decoration: BoxDecoration(
-            color: const Color(0xFFDDF2E3),
+            color: AgaramColors.successContainer,
             borderRadius: BorderRadius.circular(14),
             border: const Border(
-              left: BorderSide(color: Color(0xFF2E7D32), width: 3),
+              left: BorderSide(color: AgaramColors.success, width: 3),
             ),
           ),
           child: Column(
@@ -313,7 +313,7 @@ class _AddMemberSheetState extends State<AddMemberSheet> {
                 style: GoogleFonts.inter(
                   fontSize: 12,
                   fontWeight: FontWeight.w700,
-                  color: const Color(0xFF1B5E20),
+                  color: AgaramColors.successDark,
                 ),
               ),
               const SizedBox(height: 8),
@@ -333,7 +333,7 @@ class _AddMemberSheetState extends State<AddMemberSheet> {
                   IconButton(
                     icon: const Icon(
                       Icons.copy_rounded,
-                      color: Color(0xFF2E7D32),
+                      color: AgaramColors.success,
                     ),
                     onPressed: () {
                       Clipboard.setData(ClipboardData(text: r.password));
@@ -348,9 +348,9 @@ class _AddMemberSheetState extends State<AddMemberSheet> {
           ),
         ),
         const SizedBox(height: 20),
-        ElevatedButton(
-          style: ElevatedButton.styleFrom(
-            backgroundColor: const Color(0xFF2E7D32),
+        FilledButton(
+          style: FilledButton.styleFrom(
+            backgroundColor: AgaramColors.success,
             foregroundColor: Colors.white,
           ),
           onPressed: () => Navigator.of(context).pop(),

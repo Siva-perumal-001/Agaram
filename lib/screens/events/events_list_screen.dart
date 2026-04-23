@@ -6,6 +6,7 @@ import 'package:provider/provider.dart';
 import '../../core/auth_service.dart';
 import '../../core/theme.dart';
 import '../../widgets/event_preview_card.dart';
+import '../../widgets/stream_error_view.dart';
 import 'event_detail_screen.dart';
 import 'event_form_screen.dart';
 
@@ -31,12 +32,6 @@ class _EventsListScreenState extends State<EventsListScreen> {
       appBar: AppBar(
         title: const Text('Events'),
         automaticallyImplyLeading: false,
-        actions: const [
-          Padding(
-            padding: EdgeInsets.only(right: 12),
-            child: Icon(Icons.tune_rounded, color: AgaramColors.primary),
-          ),
-        ],
       ),
       body: SafeArea(
         top: false,
@@ -177,6 +172,12 @@ class _EventsListScreenState extends State<EventsListScreen> {
     return StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
       stream: stream,
       builder: (_, snap) {
+        if (snap.hasError) {
+          return StreamErrorView(
+            message: "Couldn't load events.",
+            onRetry: () => setState(() {}),
+          );
+        }
         if (snap.connectionState == ConnectionState.waiting) {
           return const Center(child: CircularProgressIndicator());
         }

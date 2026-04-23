@@ -230,7 +230,7 @@ class _AddDocumentSheetState extends State<AddDocumentSheet> {
                 ),
               ),
               const SizedBox(height: 20),
-              ElevatedButton(
+              FilledButton(
                 onPressed: !ready || _uploading ? null : _upload,
                 child: _uploading
                     ? const SizedBox(

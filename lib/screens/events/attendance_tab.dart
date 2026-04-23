@@ -177,7 +177,7 @@ class AttendanceTab extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 20),
-          ElevatedButton.icon(
+          FilledButton.icon(
             onPressed: open
                 ? () => Navigator.of(context).push(
                       MaterialPageRoute(builder: (_) => const QrScannerScreen()),
@@ -223,7 +223,7 @@ class AttendanceTab extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
-        color: const Color(0xFFDDF2E3),
+        color: AgaramColors.successContainer,
         borderRadius: BorderRadius.circular(18),
       ),
       child: Row(
@@ -231,7 +231,7 @@ class AttendanceTab extends StatelessWidget {
         children: [
           const Icon(
             Icons.check_circle_rounded,
-            color: Color(0xFF2E7D32),
+            color: AgaramColors.success,
             size: 28,
           ),
           const SizedBox(width: 12),
@@ -244,7 +244,7 @@ class AttendanceTab extends StatelessWidget {
                   style: GoogleFonts.inter(
                     fontSize: 16,
                     fontWeight: FontWeight.w700,
-                    color: const Color(0xFF1B5E20),
+                    color: AgaramColors.successDark,
                   ),
                 ),
                 const SizedBox(height: 4),
@@ -252,7 +252,7 @@ class AttendanceTab extends StatelessWidget {
                   'Checked in at $timeLabel · +${entry.starsAwarded} stars added',
                   style: GoogleFonts.inter(
                     fontSize: 13,
-                    color: const Color(0xFF2E7D32),
+                    color: AgaramColors.success,
                   ),
                 ),
               ],
@@ -269,8 +269,8 @@ class AttendanceTab extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        ElevatedButton.icon(
-          style: ElevatedButton.styleFrom(
+        FilledButton.icon(
+          style: FilledButton.styleFrom(
             backgroundColor: AgaramColors.secondary,
             foregroundColor: Colors.white,
           ),

@@ -81,7 +81,7 @@ class _QrScannerScreenState extends State<QrScannerScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFF151010),
+      backgroundColor: AgaramColors.scannerBackdrop,
       extendBodyBehindAppBar: true,
       appBar: AppBar(
         backgroundColor: Colors.transparent,
@@ -206,17 +206,17 @@ class _SuccessOverlay extends StatelessWidget {
                 height: 110,
                 width: 110,
                 decoration: BoxDecoration(
-                  color: const Color(0xFF2E7D32).withValues(alpha: 0.2),
+                  color: AgaramColors.success.withValues(alpha: 0.2),
                   shape: BoxShape.circle,
                   border: Border.all(
-                    color: const Color(0xFF4CAF50),
+                    color: AgaramColors.success,
                     width: 2,
                   ),
                 ),
                 child: const Icon(
                   Icons.check_rounded,
                   size: 52,
-                  color: Color(0xFF4CAF50),
+                  color: AgaramColors.success,
                 ),
               ),
               const SizedBox(height: 28),
@@ -271,7 +271,7 @@ class _SuccessOverlay extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 32),
-              ElevatedButton(
+              FilledButton(
                 onPressed: onDone,
                 child: const Text('Done'),
               ),
@@ -340,7 +340,7 @@ class _ErrorOverlay extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 28),
-              ElevatedButton(
+              FilledButton(
                 onPressed: onRetry,
                 child: const Text('Try again'),
               ),

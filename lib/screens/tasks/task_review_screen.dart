@@ -380,7 +380,7 @@ class _TaskReviewScreenState extends State<TaskReviewScreen> {
             const SizedBox(width: 12),
             Expanded(
               flex: 6,
-              child: ElevatedButton.icon(
+              child: FilledButton.icon(
                 onPressed: _busy ? null : _approve,
                 icon: _busy
                     ? const SizedBox(

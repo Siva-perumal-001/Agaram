@@ -258,7 +258,7 @@ class _EventFormScreenState extends State<EventFormScreen> {
                 ],
               ),
               const SizedBox(height: 32),
-              ElevatedButton(
+              FilledButton(
                 onPressed: _saving ? null : _save,
                 child: _saving
                     ? const SizedBox(

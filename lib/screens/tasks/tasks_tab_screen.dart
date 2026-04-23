@@ -8,6 +8,7 @@ import '../../core/auth_service.dart';
 import '../../core/theme.dart';
 import '../../models/task.dart';
 import '../../widgets/status_chip.dart';
+import '../../widgets/stream_error_view.dart';
 import '../../widgets/task_card.dart';
 import 'task_detail_screen.dart';
 import 'task_review_screen.dart';
@@ -45,6 +46,11 @@ class _MyTasks extends StatelessWidget {
         child: StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
           stream: stream,
           builder: (_, snap) {
+            if (snap.hasError) {
+              return const StreamErrorView(
+                message: "Couldn't load your tasks.",
+              );
+            }
             if (snap.connectionState == ConnectionState.waiting) {
               return const Center(child: CircularProgressIndicator());
             }
@@ -109,18 +115,17 @@ class _AdminReviewQueue extends StatelessWidget {
       appBar: AppBar(
         title: const Text('Review Queue'),
         automaticallyImplyLeading: false,
-        actions: const [
-          Padding(
-            padding: EdgeInsets.only(right: 12),
-            child: Icon(Icons.tune_rounded, color: AgaramColors.primary),
-          ),
-        ],
       ),
       body: SafeArea(
         top: false,
         child: StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
           stream: pendingStream,
           builder: (_, pendingSnap) {
+            if (pendingSnap.hasError) {
+              return const StreamErrorView(
+                message: "Couldn't load the review queue.",
+              );
+            }
             final pending =
                 (pendingSnap.data?.docs ?? []).map(AgaramTask.fromFirestore).toList();
             return ListView(
@@ -322,7 +327,7 @@ class _ReviewQueueCard extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 14),
-          ElevatedButton.icon(
+          FilledButton.icon(
             onPressed: onOpen,
             icon: const Icon(Icons.rate_review_outlined, size: 18),
             label: const Text('Review'),

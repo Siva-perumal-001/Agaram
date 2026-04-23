@@ -8,6 +8,7 @@ import '../../core/notifications_service.dart';
 import '../../core/theme.dart';
 import '../../models/app_notification.dart';
 import '../../widgets/notification_card.dart';
+import '../../widgets/stream_error_view.dart';
 import 'compose_notification_screen.dart';
 
 enum _Filter { all, events, tasks, announcements }
@@ -112,6 +113,11 @@ class _NotificationsInboxScreenState extends State<NotificationsInboxScreen> {
     return StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
       stream: NotificationsService.stream(),
       builder: (_, snap) {
+        if (snap.hasError) {
+          return const StreamErrorView(
+            message: "Couldn't load notifications.",
+          );
+        }
         if (snap.connectionState == ConnectionState.waiting) {
           return const Center(child: CircularProgressIndicator());
         }

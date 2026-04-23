@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 
 import '../../core/auth_service.dart';
@@ -57,9 +56,9 @@ class _HomeShellState extends State<HomeShell> {
       child: SafeArea(
         top: false,
         child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 10),
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
           child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
             children: [
               _navItem(0, Icons.home_rounded, 'Home'),
               _navItem(1, Icons.calendar_month_rounded, 'Events'),
@@ -73,45 +72,24 @@ class _HomeShellState extends State<HomeShell> {
     );
   }
 
-  Widget _navItem(int idx, IconData icon, String label) {
+  Widget _navItem(int idx, IconData icon, String tooltip) {
     final selected = _index == idx;
-    return Flexible(
+    return Tooltip(
+      message: tooltip,
       child: InkWell(
         onTap: () => setState(() => _index = idx),
         borderRadius: BorderRadius.circular(999),
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 200),
-          padding: EdgeInsets.symmetric(
-            horizontal: selected ? 14 : 10,
-            vertical: 10,
-          ),
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
           decoration: BoxDecoration(
             color: selected ? AgaramColors.primaryContainer : Colors.transparent,
             borderRadius: BorderRadius.circular(999),
           ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(
-                icon,
-                size: 22,
-                color: selected ? Colors.white : AgaramColors.onSurfaceVariant,
-              ),
-              if (selected) ...[
-                const SizedBox(width: 6),
-                Flexible(
-                  child: Text(
-                    label,
-                    overflow: TextOverflow.ellipsis,
-                    style: GoogleFonts.inter(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w600,
-                      color: Colors.white,
-                    ),
-                  ),
-                ),
-              ],
-            ],
+          child: Icon(
+            icon,
+            size: 24,
+            color: selected ? Colors.white : AgaramColors.onSurfaceVariant,
           ),
         ),
       ),

@@ -7,6 +7,7 @@ import 'package:intl/intl.dart';
 import '../../core/event_service.dart';
 import '../../core/theme.dart';
 import '../../models/event.dart';
+import '../../widgets/stream_error_view.dart';
 import 'wallet_event_screen.dart';
 
 class WalletScreen extends StatelessWidget {
@@ -18,16 +19,6 @@ class WalletScreen extends StatelessWidget {
       appBar: AppBar(
         title: const Text('Wallet'),
         automaticallyImplyLeading: false,
-        actions: const [
-          Padding(
-            padding: EdgeInsets.only(right: 8),
-            child: Icon(Icons.search_rounded, color: AgaramColors.primary),
-          ),
-          Padding(
-            padding: EdgeInsets.only(right: 12),
-            child: Icon(Icons.tune_rounded, color: AgaramColors.primary),
-          ),
-        ],
       ),
       body: SafeArea(
         top: false,
@@ -36,6 +27,11 @@ class WalletScreen extends StatelessWidget {
               .orderBy('date', descending: true)
               .snapshots(),
           builder: (_, snap) {
+            if (snap.hasError) {
+              return const StreamErrorView(
+                message: "Couldn't load the wallet.",
+              );
+            }
             if (snap.connectionState == ConnectionState.waiting) {
               return const Center(child: CircularProgressIndicator());
             }

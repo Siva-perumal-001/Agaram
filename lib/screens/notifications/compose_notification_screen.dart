@@ -164,7 +164,7 @@ class _ComposeNotificationScreenState extends State<ComposeNotificationScreen> {
                     (v == null || v.trim().isEmpty) ? 'Message is required' : null,
               ),
               const SizedBox(height: 24),
-              ElevatedButton.icon(
+              FilledButton.icon(
                 onPressed: _sending ? null : _send,
                 icon: _sending
                     ? const SizedBox(

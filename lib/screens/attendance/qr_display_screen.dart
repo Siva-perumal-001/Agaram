@@ -251,7 +251,11 @@ class _LiveCount extends StatelessWidget {
           ),
           child: Row(
             children: [
-              const Text('🎉', style: TextStyle(fontSize: 20)),
+              const Icon(
+                Icons.celebration_rounded,
+                size: 20,
+                color: AgaramColors.secondaryContainer,
+              ),
               const SizedBox(width: 10),
               Expanded(
                 child: Text(

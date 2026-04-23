@@ -288,20 +288,20 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
     final (label, bg, fg, icon) = switch (task.status) {
       TaskStatus.submitted => (
           'Submitted · awaiting review',
-          const Color(0xFFFEF3D0),
-          const Color(0xFF795900),
+          AgaramColors.warningContainer,
+          AgaramColors.warning,
           Icons.hourglass_bottom_rounded,
         ),
       TaskStatus.approved => (
           'Approved · +${task.starsAwarded} stars added',
-          const Color(0xFFDDF2E3),
-          const Color(0xFF2E7D32),
+          AgaramColors.successContainer,
+          AgaramColors.success,
           Icons.check_circle_rounded,
         ),
       TaskStatus.rejected => (
           'Needs resubmission',
-          const Color(0xFFFCE4E1),
-          const Color(0xFFBA1A1A),
+          AgaramColors.errorContainer,
+          AgaramColors.error,
           Icons.replay_rounded,
         ),
       TaskStatus.pending => ('', Colors.transparent, Colors.transparent, Icons.circle),
@@ -509,7 +509,7 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
 
   Widget _submitButton(bool canEdit) {
     final enabled = canEdit && _localFile != null && !_submitting;
-    return ElevatedButton(
+    return FilledButton(
       onPressed: enabled ? _submit : null,
       child: _submitting
           ? const SizedBox(

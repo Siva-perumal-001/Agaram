@@ -96,17 +96,35 @@ class _MemberHomeScreenState extends State<MemberHomeScreen> {
 
   Widget _greeting(AppUser user) {
     final firstName = user.name.split(' ').first;
+    final greetingStyle = GoogleFonts.inter(
+      fontSize: 28,
+      fontWeight: FontWeight.w700,
+      color: AgaramColors.primary,
+      height: 1.2,
+    );
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          'Vanakkam, ${firstName.isEmpty ? 'friend' : firstName} 👋',
-          style: GoogleFonts.inter(
-            fontSize: 32,
-            fontWeight: FontWeight.w700,
-            color: AgaramColors.primary,
-            height: 1.2,
+        Text.rich(
+          TextSpan(
+            style: greetingStyle,
+            children: [
+              TextSpan(
+                text: 'Vanakkam, ${firstName.isEmpty ? 'friend' : firstName}',
+              ),
+              const TextSpan(text: '  '),
+              WidgetSpan(
+                alignment: PlaceholderAlignment.middle,
+                child: Icon(
+                  Icons.waving_hand_rounded,
+                  size: 26,
+                  color: AgaramColors.secondary,
+                ),
+              ),
+            ],
           ),
+          maxLines: 2,
+          overflow: TextOverflow.ellipsis,
         ),
         const SizedBox(height: 4),
         Text(

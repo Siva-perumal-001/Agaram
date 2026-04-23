@@ -130,13 +130,13 @@ class ProfileScreen extends StatelessWidget {
         AchievementBadge(
           icon: Icons.event_available_rounded,
           label: '5 Events',
-          color: const Color(0xFF86BCE7),
+          color: AgaramColors.infoSoft,
           unlocked: stars >= 10,
         ),
         AchievementBadge(
           icon: Icons.edit_note_rounded,
           label: 'Poet',
-          color: const Color(0xFFFFB3AC),
+          color: AgaramColors.accentPeach,
           unlocked: false,
         ),
         AchievementBadge(

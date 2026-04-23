@@ -6,6 +6,7 @@ import 'package:provider/provider.dart';
 import '../../core/auth_service.dart';
 import '../../core/theme.dart';
 import '../../models/app_user.dart';
+import '../../widgets/stream_error_view.dart';
 
 class LeaderboardScreen extends StatelessWidget {
   const LeaderboardScreen({super.key});
@@ -26,6 +27,11 @@ class LeaderboardScreen extends StatelessWidget {
         child: StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
           stream: stream,
           builder: (_, snap) {
+            if (snap.hasError) {
+              return const StreamErrorView(
+                message: "Couldn't load the leaderboard.",
+              );
+            }
             if (snap.connectionState == ConnectionState.waiting) {
               return const Center(child: CircularProgressIndicator());
             }
@@ -40,18 +46,20 @@ class LeaderboardScreen extends StatelessWidget {
               children: [
                 const SizedBox(height: 8),
                 _Podium(top3: top3),
-                const SizedBox(height: 24),
-                _headerRow(),
-                const SizedBox(height: 8),
-                for (int i = 0; i < rest.length; i++)
-                  Padding(
-                    padding: const EdgeInsets.only(bottom: 10),
-                    child: _LeaderRow(
-                      user: rest[i],
-                      rank: i + 4,
-                      isMe: meUid != null && rest[i].uid == meUid,
+                if (rest.isNotEmpty) ...[
+                  const SizedBox(height: 24),
+                  _headerRow(),
+                  const SizedBox(height: 8),
+                  for (int i = 0; i < rest.length; i++)
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 10),
+                      child: _LeaderRow(
+                        user: rest[i],
+                        rank: i + 4,
+                        isMe: meUid != null && rest[i].uid == meUid,
+                      ),
                     ),
-                  ),
+                ],
               ],
             );
           },
@@ -117,9 +125,9 @@ class _Podium extends StatelessWidget {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.end,
         children: [
-          Expanded(child: _PodiumBar(user: second, place: 2, height: 150)),
-          Expanded(child: _PodiumBar(user: first, place: 1, height: 210)),
-          Expanded(child: _PodiumBar(user: third, place: 3, height: 120)),
+          Expanded(child: _PodiumBar(user: second, place: 2, height: 100)),
+          Expanded(child: _PodiumBar(user: first, place: 1, height: 140)),
+          Expanded(child: _PodiumBar(user: third, place: 3, height: 80)),
         ],
       ),
     );
@@ -142,13 +150,13 @@ class _PodiumBar extends StatelessWidget {
     final accent = place == 1
         ? AgaramColors.secondary
         : place == 2
-            ? const Color(0xFFB0B0B0)
-            : const Color(0xFFCD7F32);
+            ? AgaramColors.silver
+            : AgaramColors.bronze;
     final bg = place == 1
         ? AgaramColors.secondaryContainer
         : place == 2
-            ? const Color(0xFFEAEAEA)
-            : const Color(0xFFF3D6BC);
+            ? AgaramColors.silverContainer
+            : AgaramColors.bronzeContainer;
 
     return Column(
       mainAxisAlignment: MainAxisAlignment.end,

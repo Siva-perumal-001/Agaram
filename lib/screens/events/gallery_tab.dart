@@ -43,8 +43,8 @@ class GalleryTab extends StatelessWidget {
             if (user != null)
               Align(
                 alignment: Alignment.centerRight,
-                child: ElevatedButton.icon(
-                  style: ElevatedButton.styleFrom(
+                child: FilledButton.icon(
+                  style: FilledButton.styleFrom(
                     backgroundColor: AgaramColors.secondary,
                     foregroundColor: Colors.white,
                     minimumSize: const Size(180, 48),
@@ -163,7 +163,7 @@ class GalleryTab extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 16),
-              ElevatedButton(
+              FilledButton(
                 onPressed: () => Navigator.of(sheetCtx).pop(true),
                 child: const Text('Upload'),
               ),
