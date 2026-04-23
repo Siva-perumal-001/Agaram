@@ -38,5 +38,6 @@ lib/
 - [x] **Phase 4** — Attendance via rotating QR (admin shows, member scans, +2 stars tx) + Event gallery grid + photo lightbox + admin manual mark
 - [x] **Phase 5** — Notifications inbox + compose (FCM topics via bundled SA) + Members list + Add Member (secondary Firebase app) + promote/demote + Leaderboard with podium
 - [x] **Phase 6** — Production Firestore rules, app launcher icon, native cream splash, release APK built
+- [x] **Phase 7** — Enhancement Pack: auto push notifications (new event/task/approve/reject), 10-min local reminders, tap-to-open deep links, position badges (Secretary/VP/Treasurer/etc.), member deactivate, profile photo upload, Wallet (per-event docs), Meetings kind, 3-hour QR check-in window, admin-set password on Add Member
 
 Full plan: `/Users/apple/.claude/plans/tamil-club-app-replicated-hedgehog.md`
