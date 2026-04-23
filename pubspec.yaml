@@ -33,6 +33,7 @@ dependencies:
   googleapis_auth: ^1.6.0
   http: ^1.2.2
   timezone: ^0.9.4
+  url_launcher: ^6.3.0
 
 dev_dependencies:
   flutter_test:
