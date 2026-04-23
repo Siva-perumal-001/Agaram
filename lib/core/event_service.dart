@@ -10,13 +10,19 @@ import '../models/app_notification.dart';
 import '../models/task.dart';
 
 class EventService {
-  static final FirebaseFirestore _db = FirebaseFirestore.instance;
+  static FirebaseFirestore? _override;
+  static FirebaseFirestore get _db => _override ?? FirebaseFirestore.instance;
+
+  @visibleForTesting
+  static set database(FirebaseFirestore db) => _override = db;
+  @visibleForTesting
+  static void resetDatabase() => _override = null;
 
   static CollectionReference<Map<String, dynamic>> get events =>
       _db.collection('events');
 
   static CollectionReference<Map<String, dynamic>> tasks(String eventId) =>
-      events.doc(eventId).collection('tasks');
+      _db.collection('events').doc(eventId).collection('tasks');
 
   static Future<DocumentReference<Map<String, dynamic>>> createEvent(
     Map<String, dynamic> data,
@@ -290,11 +296,17 @@ class EventService {
   }
 
   static ({String uid, String name}) _senderContext() {
-    final u = FirebaseAuth.instance.currentUser;
-    return (
-      uid: u?.uid ?? '',
-      name: u?.displayName ??
-          (u?.email?.split('@').first ?? 'Admin'),
-    );
+    // Guarded — unit tests run without a FirebaseAuth instance and would
+    // otherwise blow up at the top of approve/reject/addTask.
+    try {
+      final u = FirebaseAuth.instance.currentUser;
+      return (
+        uid: u?.uid ?? '',
+        name: u?.displayName ??
+            (u?.email?.split('@').first ?? 'Admin'),
+      );
+    } catch (_) {
+      return (uid: '', name: 'Admin');
+    }
   }
 }

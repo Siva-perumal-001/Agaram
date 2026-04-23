@@ -1,16 +1,22 @@
 import 'dart:io';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter/foundation.dart';
 
 import 'cloudinary_service.dart';
-import 'event_service.dart';
 import '../models/wallet_doc.dart';
 
 class WalletService {
-  static final FirebaseFirestore _db = FirebaseFirestore.instance;
+  static FirebaseFirestore? _override;
+  static FirebaseFirestore get _db => _override ?? FirebaseFirestore.instance;
+
+  @visibleForTesting
+  static set database(FirebaseFirestore db) => _override = db;
+  @visibleForTesting
+  static void resetDatabase() => _override = null;
 
   static CollectionReference<Map<String, dynamic>> collection(String eventId) =>
-      EventService.events.doc(eventId).collection('wallet');
+      _db.collection('events').doc(eventId).collection('wallet');
 
   static Stream<QuerySnapshot<Map<String, dynamic>>> stream(String eventId) {
     return collection(eventId)
@@ -53,7 +59,7 @@ class WalletService {
         'sizeBytes': bytes,
       });
       tx.set(
-        EventService.events.doc(eventId),
+        _db.collection('events').doc(eventId),
         {
           'walletCounts': {
             if (type == WalletDocType.pdf) 'pdfs': FieldValue.increment(1),
@@ -75,7 +81,7 @@ class WalletService {
     await _db.runTransaction((tx) async {
       tx.delete(collection(eventId).doc(doc.id));
       tx.set(
-        EventService.events.doc(eventId),
+        _db.collection('events').doc(eventId),
         {
           'walletCounts': {
             if (doc.type == WalletDocType.pdf) 'pdfs': FieldValue.increment(-1),

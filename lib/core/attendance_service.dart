@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter/foundation.dart';
 import 'package:uuid/uuid.dart';
 
 import 'app_config.dart';
@@ -35,7 +36,14 @@ class AttendanceException implements Exception {
 }
 
 class AttendanceService {
-  static final FirebaseFirestore _db = FirebaseFirestore.instance;
+  static FirebaseFirestore? _override;
+  static FirebaseFirestore get _db => _override ?? FirebaseFirestore.instance;
+
+  /// Swap the underlying Firestore for unit tests. Reset in tearDown.
+  @visibleForTesting
+  static set database(FirebaseFirestore db) => _override = db;
+  @visibleForTesting
+  static void resetDatabase() => _override = null;
 
   static CollectionReference<Map<String, dynamic>> attendance(String eventId) =>
       EventService.events.doc(eventId).collection('attendance');

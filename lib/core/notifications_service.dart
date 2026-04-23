@@ -1,9 +1,16 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter/foundation.dart';
 
 import '../models/app_notification.dart';
 
 class NotificationsService {
-  static final FirebaseFirestore _db = FirebaseFirestore.instance;
+  static FirebaseFirestore? _override;
+  static FirebaseFirestore get _db => _override ?? FirebaseFirestore.instance;
+
+  @visibleForTesting
+  static set database(FirebaseFirestore db) => _override = db;
+  @visibleForTesting
+  static void resetDatabase() => _override = null;
 
   static CollectionReference<Map<String, dynamic>> get _col =>
       _db.collection('notifications');
