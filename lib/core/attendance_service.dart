@@ -57,7 +57,6 @@ class AttendanceService {
     await _db.runTransaction((tx) async {
       final eventRef = EventService.events.doc(payload.eventId);
       final attendanceRef = attendance(payload.eventId).doc(memberUid);
-      final userRef = _db.collection('users').doc(memberUid);
 
       final eventSnap = await tx.get(eventRef);
       if (!eventSnap.exists) {
@@ -102,19 +101,21 @@ class AttendanceService {
         throw AttendanceException('You’re already checked in for this event.');
       }
 
-      final userSnap = await tx.get(userRef);
-      final currentStars = (userSnap.data()?['stars'] as num?)?.toInt() ?? 0;
-
+      // qrSecretUsed is required by firestore.rules — the rule re-reads the
+      // event's current qrSecret and refuses the write if it doesn't match,
+      // so a member cannot forge attendance without a freshly rotated QR.
       tx.set(attendanceRef, {
         'userId': memberUid,
         'userName': memberName,
         'checkedInAt': FieldValue.serverTimestamp(),
         'method': 'qr',
         'starsAwarded': AppConfig.starsPerAttendance,
+        'qrSecretUsed': payload.secret,
       });
-      tx.update(userRef, {
-        'stars': currentStars + AppConfig.starsPerAttendance,
-      });
+      // Member clients cannot write their own `stars` under the tightened
+      // self-update rule. Attendance stars live on the attendance doc
+      // (`starsAwarded: 2`); admin-side reconciliation writes them into
+      // `user.stars` via the admin branch of the user-update rule.
     });
   }
 
@@ -127,11 +128,23 @@ class AttendanceService {
       final attendanceRef = attendance(eventId).doc(memberUid);
       final userRef = _db.collection('users').doc(memberUid);
 
+      final userSnap = await tx.get(userRef);
+      if (!userSnap.exists) {
+        throw AttendanceException('That member no longer exists.');
+      }
+      // Refuse to credit a deactivated account — stars awarded here would
+      // show on the leaderboard for someone who can't even sign in.
+      final isActive = userSnap.data()?['active'] as bool? ?? true;
+      if (!isActive) {
+        throw AttendanceException(
+          'This member is deactivated. Reactivate them before marking attendance.',
+        );
+      }
+
       final existing = await tx.get(attendanceRef);
       if (existing.exists) {
         throw AttendanceException('Already marked present.');
       }
-      final userSnap = await tx.get(userRef);
       final currentStars = (userSnap.data()?['stars'] as num?)?.toInt() ?? 0;
 
       tx.set(attendanceRef, {
