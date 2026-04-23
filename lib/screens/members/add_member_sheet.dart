@@ -74,7 +74,7 @@ class _AddMemberSheetState extends State<AddMemberSheet> {
       padding: EdgeInsets.only(
         bottom: MediaQuery.of(context).viewInsets.bottom,
       ),
-      child: Padding(
+      child: SingleChildScrollView(
         padding: const EdgeInsets.fromLTRB(20, 4, 20, 24),
         child: _result != null ? _successView(_result!) : _formView(),
       ),
