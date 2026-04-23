@@ -23,6 +23,27 @@ class AgaramColors {
 
   static const error = Color(0xFFBA1A1A);
   static const onError = Color(0xFFFFFFFF);
+
+  // Semantic status tones — reused across status chips, banners, success/error overlays.
+  static const success = Color(0xFF2E7D32);
+  static const successDark = Color(0xFF1B5E20);
+  static const successContainer = Color(0xFFDDF2E3);
+  static const warning = Color(0xFF795900);
+  static const warningContainer = Color(0xFFFEF3D0);
+  static const errorContainer = Color(0xFFFCE4E1);
+  static const neutralContainer = Color(0xFFEFE7E6);
+  static const info = Color(0xFF6C4BB6);
+  static const infoSoft = Color(0xFF86BCE7);
+  static const accentPeach = Color(0xFFFFB3AC);
+
+  // Medal tones for leaderboard podium.
+  static const silver = Color(0xFFB0B0B0);
+  static const silverContainer = Color(0xFFEAEAEA);
+  static const bronze = Color(0xFFCD7F32);
+  static const bronzeContainer = Color(0xFFF3D6BC);
+
+  // Scanner / dark overlay backdrop.
+  static const scannerBackdrop = Color(0xFF151010);
 }
 
 class AgaramTheme {
@@ -130,8 +151,8 @@ class AgaramTheme {
           fontWeight: FontWeight.w500,
         ),
       ),
-      elevatedButtonTheme: ElevatedButtonThemeData(
-        style: ElevatedButton.styleFrom(
+      filledButtonTheme: FilledButtonThemeData(
+        style: FilledButton.styleFrom(
           backgroundColor: AgaramColors.primary,
           foregroundColor: AgaramColors.onPrimary,
           disabledBackgroundColor: AgaramColors.primary.withValues(alpha: 0.4),
@@ -144,6 +165,20 @@ class AgaramTheme {
             fontWeight: FontWeight.w600,
           ),
           elevation: 0,
+        ),
+      ),
+      outlinedButtonTheme: OutlinedButtonThemeData(
+        style: OutlinedButton.styleFrom(
+          foregroundColor: AgaramColors.primary,
+          side: const BorderSide(color: AgaramColors.primary, width: 1.2),
+          minimumSize: const Size.fromHeight(56),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+          textStyle: GoogleFonts.inter(
+            fontSize: 16,
+            fontWeight: FontWeight.w600,
+          ),
         ),
       ),
       textButtonTheme: TextButtonThemeData(
