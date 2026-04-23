@@ -3,6 +3,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
 
 import '../models/app_user.dart';
+import 'fcm_service.dart';
 
 enum AuthStatus { unknown, unauthenticated, authenticated }
 
@@ -25,12 +26,22 @@ class AuthService extends ChangeNotifier {
     if (firebaseUser == null) {
       _currentUser = null;
       _status = AuthStatus.unauthenticated;
+      try {
+        await FcmService.unsubscribeAll();
+      } catch (_) {
+        // topic unsubscribe is best-effort.
+      }
       notifyListeners();
       return;
     }
     try {
       await _loadUser(firebaseUser.uid);
       _status = AuthStatus.authenticated;
+      if (_currentUser?.isAdmin ?? false) {
+        await FcmService.subscribeForAdmin();
+      } else {
+        await FcmService.subscribeForMember();
+      }
     } catch (e) {
       await _auth.signOut();
       _currentUser = null;

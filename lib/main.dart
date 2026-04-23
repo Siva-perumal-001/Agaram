@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 
 import 'app.dart';
 import 'core/auth_service.dart';
+import 'core/fcm_service.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -13,6 +14,11 @@ Future<void> main() async {
     statusBarIconBrightness: Brightness.dark,
   ));
   await Firebase.initializeApp();
+  try {
+    await FcmService.initOnStart();
+  } catch (e) {
+    debugPrint('FCM init failed (non-fatal): $e');
+  }
   runApp(
     ChangeNotifierProvider(
       create: (_) => AuthService(),
