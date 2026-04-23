@@ -80,6 +80,12 @@ class FcmService {
     }
   }
 
+  /// Drops only the admins_only subscription — used when an admin is
+  /// demoted mid-session so they stop receiving admin pushes without
+  /// losing all_members / user_{uid} topics.
+  static Future<void> unsubscribeFromAdminTopic() =>
+      _messaging.unsubscribeFromTopic(AppConfig.topicAdmins);
+
   static Future<void> sendToUser({
     required String uid,
     required String title,

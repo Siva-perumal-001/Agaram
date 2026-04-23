@@ -16,6 +16,7 @@ class AuthService extends ChangeNotifier {
 
   AuthStatus _status = AuthStatus.unknown;
   AppUser? _currentUser;
+  StreamSubscription<DocumentSnapshot<Map<String, dynamic>>>? _userSub;
 
   AuthStatus get status => _status;
   AppUser? get currentUser => _currentUser;
@@ -28,6 +29,8 @@ class AuthService extends ChangeNotifier {
   Future<void> _handleAuthChange(User? firebaseUser) async {
     if (firebaseUser == null) {
       final lastUid = _currentUser?.uid;
+      await _userSub?.cancel();
+      _userSub = null;
       _currentUser = null;
       _status = AuthStatus.unauthenticated;
       try {
@@ -49,6 +52,7 @@ class AuthService extends ChangeNotifier {
       }
       // Refresh local event reminders for the freshly signed-in member.
       unawaited(ReminderService.syncUpcoming());
+      _watchActiveFlag(firebaseUser.uid);
     } catch (e) {
       await _auth.signOut();
       _currentUser = null;
@@ -75,6 +79,47 @@ class AuthService extends ChangeNotifier {
     _currentUser = user;
   }
 
+  /// Streams the signed-in user's doc so a mid-session deactivation
+  /// (admin flips `active` to false, or role/position changes) kicks the
+  /// user out immediately instead of waiting for the next cold start.
+  void _watchActiveFlag(String uid) {
+    _userSub?.cancel();
+    _userSub = _firestore
+        .collection('users')
+        .doc(uid)
+        .snapshots()
+        .listen((snap) async {
+      if (!snap.exists) {
+        // Profile deleted by president — sign out.
+        await _auth.signOut();
+        return;
+      }
+      final user = AppUser.fromFirestore(snap);
+      if (!user.active) {
+        await _auth.signOut();
+        return;
+      }
+      // Keep FCM topic membership in sync with the current role so a
+      // demoted admin stops receiving admins_only pushes without having
+      // to sign out and back in.
+      final wasAdmin = _currentUser?.isAdmin ?? false;
+      if (wasAdmin != user.isAdmin) {
+        try {
+          if (user.isAdmin) {
+            await FcmService.subscribeForAdmin(uid);
+          } else {
+            await FcmService
+                .unsubscribeFromAdminTopic(); // just the admins_only topic
+          }
+        } catch (_) {
+          // topic reconciliation is best-effort.
+        }
+      }
+      _currentUser = user;
+      notifyListeners();
+    });
+  }
+
   Future<void> signIn({required String email, required String password}) async {
     try {
       await _auth.signInWithEmailAndPassword(
@@ -90,7 +135,21 @@ class AuthService extends ChangeNotifier {
     try {
       await _auth.sendPasswordResetEmail(email: email.trim());
     } on FirebaseAuthException catch (e) {
-      throw AuthException(_mapAuthError(e));
+      // Reset flow must not reveal whether an address is registered — a
+      // 'user-not-found' response would enumerate club membership. Surface
+      // only the two network-style errors; everything else (including
+      // missing account) returns the neutral copy the UI already shows
+      // alongside the success state.
+      if (e.code == 'invalid-email') {
+        throw AuthException('That email address looks invalid.');
+      }
+      if (e.code == 'network-request-failed') {
+        throw AuthException('Network error. Check your internet connection.');
+      }
+      if (kDebugMode) {
+        debugPrint('[auth] suppressed reset error: ${e.code}');
+      }
+      // Silent success — caller shows "If that email is registered, we sent a link."
     }
   }
 
