@@ -95,7 +95,8 @@ class ReminderService {
           androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
           uiLocalNotificationDateInterpretation:
               UILocalNotificationDateInterpretation.absoluteTime,
-          payload: 'event:${doc.id}',
+          payload:
+              '{"kind":"event","eventId":"${doc.id}"}',
         );
       } catch (e) {
         if (kDebugMode) debugPrint('[reminders] schedule failed for ${doc.id}: $e');
