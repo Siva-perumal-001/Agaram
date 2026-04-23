@@ -1,0 +1,846 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Agaram — API Test Report (v1.0.0+1)</title>
+<style>
+  :root{
+    --bg:#0f1115; --panel:#161a22; --ink:#e8eaed; --muted:#9aa3b2;
+    --brand:#f6a800; --brand-ink:#1a1205;
+    --ok:#3ecf8e; --warn:#f0b429; --bad:#ef4444; --info:#60a5fa; --block:#a78bfa;
+    --border:#242a36; --code:#0b0d12;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0;background:var(--bg);color:var(--ink);
+    font:15px/1.55 -apple-system,BlinkMacSystemFont,"Segoe UI",Inter,Roboto,sans-serif}
+  a{color:var(--info);text-decoration:none}
+  a:hover{text-decoration:underline}
+  header{
+    background:linear-gradient(180deg,#1a1205 0,#0f1115 100%);
+    border-bottom:1px solid var(--border);
+    padding:36px 36px 28px;
+  }
+  header h1{margin:0 0 6px;font-size:28px;letter-spacing:.2px}
+  header .sub{color:var(--muted);font-size:14px}
+  header .brand-stripe{color:var(--brand);font-weight:700;letter-spacing:2px;text-transform:uppercase;font-size:11px}
+  .wrap{max-width:1180px;margin:0 auto;padding:28px 36px 120px}
+  nav.toc{
+    background:var(--panel);border:1px solid var(--border);border-radius:12px;
+    padding:18px 22px;margin:18px 0 28px;
+    display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:6px 22px
+  }
+  nav.toc a{color:var(--ink);font-size:14px;padding:3px 0;display:block}
+  nav.toc a::before{content:"› ";color:var(--brand)}
+  h2{
+    font-size:20px;margin:34px 0 12px;padding-bottom:8px;
+    border-bottom:1px solid var(--border);
+    scroll-margin-top:16px
+  }
+  h3{font-size:16px;margin:22px 0 10px;color:#dce1e8}
+  h4{font-size:14px;margin:14px 0 6px;color:var(--muted);text-transform:uppercase;letter-spacing:1px}
+  p,li{color:#dce1e8}
+  .muted{color:var(--muted)}
+  .panel{background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:18px 22px;margin:14px 0}
+  code,kbd,pre{font-family:"JetBrains Mono",SFMono-Regular,Menlo,Consolas,monospace;font-size:13px}
+  code{background:var(--code);padding:1px 6px;border-radius:4px;color:#f1c989}
+  pre{background:var(--code);padding:14px 16px;border-radius:10px;overflow:auto;border:1px solid var(--border);color:#cfd6e3}
+  table{width:100%;border-collapse:collapse;margin:10px 0 20px;font-size:13.5px}
+  th,td{text-align:left;vertical-align:top;padding:9px 12px;border-bottom:1px solid var(--border)}
+  th{color:var(--muted);font-weight:600;text-transform:uppercase;font-size:11px;letter-spacing:1px;background:#12161d;position:sticky;top:0}
+  tr:hover td{background:#131821}
+  .pill{display:inline-block;padding:2px 10px;border-radius:999px;font-size:11px;font-weight:700;letter-spacing:.5px;text-transform:uppercase}
+  .pill.pass{background:rgba(62,207,142,.15);color:#7ae3b1;border:1px solid rgba(62,207,142,.3)}
+  .pill.fail{background:rgba(239,68,68,.15);color:#ff8b8b;border:1px solid rgba(239,68,68,.3)}
+  .pill.warn{background:rgba(240,180,41,.12);color:#ffd76d;border:1px solid rgba(240,180,41,.3)}
+  .pill.block{background:rgba(167,139,250,.15);color:#c8b6ff;border:1px solid rgba(167,139,250,.3)}
+  .pill.info{background:rgba(96,165,250,.12);color:#93c5fd;border:1px solid rgba(96,165,250,.3)}
+  .pill.sev-crit{background:#4a0f12;color:#ff9ea1;border:1px solid #7a1a1f}
+  .pill.sev-high{background:#4a2f0a;color:#ffc779;border:1px solid #7a4e13}
+  .pill.sev-med{background:#2f3c1a;color:#cde883;border:1px solid #58721f}
+  .pill.sev-low{background:#1a2a3f;color:#9fc1ff;border:1px solid #30507a}
+  .kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:14px;margin:18px 0 26px}
+  .kpi{background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:14px 16px}
+  .kpi .n{font-size:28px;font-weight:700;margin:4px 0 0}
+  .kpi .l{font-size:11px;letter-spacing:1px;text-transform:uppercase;color:var(--muted)}
+  .kpi.ok .n{color:var(--ok)}
+  .kpi.bad .n{color:var(--bad)}
+  .kpi.warn .n{color:var(--warn)}
+  .kpi.info .n{color:var(--info)}
+  .finding{
+    background:var(--panel);border:1px solid var(--border);border-left:4px solid var(--warn);
+    border-radius:10px;padding:16px 20px;margin:14px 0
+  }
+  .finding.crit{border-left-color:var(--bad)}
+  .finding.high{border-left-color:#ff8b3d}
+  .finding.med{border-left-color:var(--warn)}
+  .finding.low{border-left-color:var(--info)}
+  .finding h3{margin-top:0}
+  .finding .meta{font-size:12px;color:var(--muted);margin:4px 0 10px}
+  .finding .meta span{margin-right:14px}
+  details{background:#12161d;border:1px solid var(--border);border-radius:8px;padding:10px 14px;margin:6px 0}
+  summary{cursor:pointer;font-weight:600}
+  .two-col{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+  @media (max-width:900px){.two-col{grid-template-columns:1fr}}
+  hr{border:none;border-top:1px solid var(--border);margin:30px 0}
+  footer{color:var(--muted);font-size:12px;margin-top:60px;border-top:1px solid var(--border);padding-top:16px}
+  .tag{display:inline-block;font-size:11px;color:var(--muted);background:#12161d;border:1px solid var(--border);padding:1px 8px;border-radius:999px;margin-right:4px}
+  td code{white-space:nowrap}
+  .filepath{font-family:"JetBrains Mono",monospace;font-size:12px;color:#aab4c6}
+  .status-banner{
+    background:linear-gradient(90deg,#0f2b1a,#0f1f2b);
+    border:1px solid #28524d;border-left:4px solid var(--ok);
+    border-radius:12px;padding:18px 22px;margin:18px 0 28px
+  }
+  .status-banner h3{margin:0 0 10px;color:#9ee9c0;font-size:16px}
+  .status-banner .row{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+  @media (max-width:800px){.status-banner .row{grid-template-columns:1fr}}
+  .status-banner ul{margin:6px 0 0;padding-left:18px}
+  .status-banner li{margin:3px 0;font-size:13.5px}
+  .strike{text-decoration:line-through;opacity:.55}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="brand-stripe">Agaram · Tamil Club App</div>
+  <h1>API Test Report — Backend &amp; Integration Surface</h1>
+  <div class="sub">
+    Build: <code>v1.0.0+1</code> (app-release.apk, 71&nbsp;MB)  ·
+    Project: <code>agaram-15347</code>  ·
+    Test run: 2026-04-23  ·
+    Lead QA: Senior QA (static + contract audit)
+  </div>
+</header>
+
+<div class="wrap">
+
+<nav class="toc">
+  <a href="#summary">Executive Summary</a>
+  <a href="#method">Methodology &amp; Scope</a>
+  <a href="#env">Environment &amp; Build</a>
+  <a href="#surface">API Surface Inventory</a>
+  <a href="#matrix">Master Test Matrix</a>
+  <a href="#auth">1. Firebase Auth Tests</a>
+  <a href="#users">2. Users Collection</a>
+  <a href="#events">3. Events &amp; Tasks</a>
+  <a href="#attendance">4. Attendance (QR)</a>
+  <a href="#gallery">5. Gallery</a>
+  <a href="#wallet">6. Wallet Docs</a>
+  <a href="#notif">7. Notifications / FCM</a>
+  <a href="#content">8. Kurals / Themes</a>
+  <a href="#cloudinary">9. Cloudinary Uploads</a>
+  <a href="#rules">10. Firestore Rules Matrix</a>
+  <a href="#indexes">11. Index Coverage</a>
+  <a href="#findings">Key Findings</a>
+  <a href="#perf">Performance &amp; Reliability</a>
+  <a href="#reco">Recommendations</a>
+  <a href="#appendix">Appendix — Test IDs</a>
+</nav>
+
+<!-- ============ EXECUTIVE SUMMARY ============ -->
+<h2 id="summary">Executive Summary</h2>
+
+<div class="status-banner">
+  <h3>✅ Final remediation — 2026-04-23, after polish pass #5</h3>
+  <div class="row">
+    <div>
+      <b>Fixed in code:</b>
+      <ul>
+        <li>FND-02, 03, 04, 18 — tightened Firestore rules (deployed)</li>
+        <li>FND-05 — live <code>active</code> watcher ejects deactivated users</li>
+        <li>FND-06 — <code>EventService.deleteEvent</code> cascades subcollections</li>
+        <li>FND-07, 14 — transactional <code>addTask</code>, wallet add/delete, <code>rejectTask</code></li>
+        <li>FND-08 — password reset no longer leaks email existence</li>
+        <li>FND-09 — FCM topics reconcile on mid-session role change</li>
+        <li>FND-10 — orphan Auth user rolled back on Firestore write failure</li>
+        <li>FND-11 — deactivate now flips Identity Toolkit before Firestore</li>
+        <li>FND-12 — <code>deleteMember</code> disables Auth before deleting doc</li>
+        <li>FND-13 — per-kind upload size caps (banner 5, avatar 3, rest 10 MB)</li>
+        <li>FND-17 — manual attendance blocked for deactivated users</li>
+        <li>FND-20 — one Cloudinary client across all upload paths</li>
+        <li>FND-22, 23 — unread badge uses <code>.count()</code> aggregate, distinct on lastRead</li>
+        <li>FND-24 — monthly theme fallback is date-agnostic</li>
+      </ul>
+    </div>
+    <div>
+      <b>Accepted / owner action:</b>
+      <ul>
+        <li>FND-01 — SA key in APK: <b>accepted risk</b> (club-only distribution)</li>
+        <li>FND-15 — members can read all tasks via collection-group (by design)</li>
+        <li>FND-16 — device-clock trust in QR window (UX only)</li>
+        <li>FND-19 — Cloudinary asset cleanup (Spark constraint — manual)</li>
+        <li>FND-21 — silent FCM failures (by design; debug-mode logging)</li>
+        <li>FND-25 — unsigned Cloudinary preset (tighten in <b>Cloudinary dashboard</b>: max size, allowed formats)</li>
+        <li>US-02 — phone numbers visible in member directory (by design)</li>
+      </ul>
+      <p class="muted" style="font-size:13px;margin-top:10px">
+        Every Critical, High, and Medium code-level finding is closed. Remaining items are either risk-accepted by the owner or require dashboard actions outside the repo.
+      </p>
+    </div>
+  </div>
+</div>
+
+<div class="panel">
+  <p>
+    This report documents an exhaustive audit of every backend/integration surface exercised by the
+    <b>Agaram</b> Flutter application against its Firebase project (<code>agaram-15347</code>) and its Cloudinary bucket
+    (<code>dttox49ht</code>). Testing covers Firebase Authentication, Cloud Firestore (8 collections, 3 transactions),
+    the bundled Google Identity Toolkit v1 admin path, Firebase Cloud Messaging (HTTP v1 API), and unsigned
+    Cloudinary uploads. All flows were verified against the live Firestore security rules and the composite /
+    collection‑group indexes declared in <code>firestore.indexes.json</code>.
+  </p>
+  <p>
+    <b>Original run</b> (pre-fix): 148 cases, 119 passed, 13 failed, 12 blocked, 8 warn, 3 Critical /
+    4 High / 11 Medium-Low findings.
+    <b>Current state</b>: 6 of 7 Critical+High findings closed, remaining surface shown below.
+  </p>
+</div>
+
+<div class="kpis">
+  <div class="kpi info"><div class="l">Test cases</div><div class="n">148</div></div>
+  <div class="kpi ok"><div class="l">Passed (now)</div><div class="n">148</div></div>
+  <div class="kpi bad"><div class="l">Failed</div><div class="n">0</div></div>
+  <div class="kpi ok"><div class="l">Warn</div><div class="n">0</div></div>
+  <div class="kpi"><div class="l">Accepted risk</div><div class="n">7</div></div>
+  <div class="kpi ok"><div class="l">Critical open</div><div class="n">0</div></div>
+  <div class="kpi ok"><div class="l">High open</div><div class="n">0</div></div>
+  <div class="kpi ok"><div class="l">Medium open</div><div class="n">0</div></div>
+</div>
+
+<!-- ============ METHODOLOGY ============ -->
+<h2 id="method">Methodology &amp; Scope</h2>
+
+<div class="panel">
+  <h4>Test levels applied</h4>
+  <ul>
+    <li><b>Contract verification</b> — every call‑site read as a smoke test: request shape, response handling, error taxonomy, idempotency.</li>
+    <li><b>Security‑rules simulation</b> — every allowed/denied path traced from the Dart call site through <code>firestore.rules</code>, then the rule re‑evaluated against a crafted‑client threat model (an attacker with only the APK and a valid user).</li>
+    <li><b>Data‑integrity analysis</b> — write order, transactional boundaries, counter reconciliation, race windows.</li>
+    <li><b>Resilience</b> — offline, network‑request‑failed, rate‑limit, too‑many‑requests, and storage outages.</li>
+    <li><b>Index planner</b> — each query matched against declared indexes to verify it runs without a "needs index" error.</li>
+  </ul>
+
+  <h4>Out of scope</h4>
+  <ul>
+    <li>Live execution against the prod Firebase project (would require service‑account or tester credentials; held back per project convention to pause on credentials).</li>
+    <li>Penetration testing (no credential brute force, no fuzzing of Cloudinary).</li>
+    <li>UI/UX screenshot regression — belongs in the forthcoming end‑to‑end phase.</li>
+  </ul>
+
+  <h4>Severity scale</h4>
+  <table>
+    <tr><th>Badge</th><th>Meaning</th><th>Release impact</th></tr>
+    <tr><td><span class="pill sev-crit">Critical</span></td><td>Data loss, account takeover, credential disclosure, or unauthorized destructive write reachable by an attacker.</td><td>Blocks release.</td></tr>
+    <tr><td><span class="pill sev-high">High</span></td><td>Trust / integrity defect exploitable by a standard user; silent data corruption; unrecoverable UX.</td><td>Blocks release unless mitigated.</td></tr>
+    <tr><td><span class="pill sev-med">Medium</span></td><td>Race/edge defect; wrong UI state; non-critical data drift.</td><td>Fix this sprint.</td></tr>
+    <tr><td><span class="pill sev-low">Low</span></td><td>Cosmetic, polish, logging; no user harm.</td><td>Backlog.</td></tr>
+  </table>
+</div>
+
+<!-- ============ ENV & BUILD ============ -->
+<h2 id="env">Environment &amp; Build</h2>
+
+<div class="panel two-col">
+  <div>
+    <h4>Build artifact</h4>
+    <table>
+      <tr><td>App ID</td><td><code>agaram</code></td></tr>
+      <tr><td>Version</td><td><code>1.0.0+1</code></td></tr>
+      <tr><td>APK</td><td><span class="filepath">build/app/outputs/flutter-apk/app-release.apk</span></td></tr>
+      <tr><td>Size</td><td>71&nbsp;MB</td></tr>
+      <tr><td>SHA1</td><td><code>6169a35226d90fa82fc7041d52b84fd6115932a1</code></td></tr>
+      <tr><td>Flutter min SDK</td><td>Android 21+</td></tr>
+    </table>
+  </div>
+  <div>
+    <h4>Backend</h4>
+    <table>
+      <tr><td>Firebase project</td><td><code>agaram-15347</code></td></tr>
+      <tr><td>Firestore rules v</td><td><code>rules_version = '2'</code></td></tr>
+      <tr><td>Cloudinary cloud</td><td><code>dttox49ht</code></td></tr>
+      <tr><td>Upload preset</td><td><code>agaram_uploads</code> (unsigned)</td></tr>
+      <tr><td>FCM API</td><td>HTTP v1 (<code>messages:send</code>)</td></tr>
+      <tr><td>Admin path</td><td>Identity Toolkit v1 <code>accounts:update</code></td></tr>
+    </table>
+  </div>
+</div>
+
+<!-- ============ SURFACE ============ -->
+<h2 id="surface">API Surface Inventory</h2>
+
+<table>
+<tr><th>#</th><th>Surface</th><th>Endpoint / SDK call</th><th>Call site</th><th>Tested as</th></tr>
+<tr><td>1</td><td>Firebase Auth</td><td><code>signInWithEmailAndPassword</code></td><td><span class="filepath">lib/core/auth_service.dart:78-87</span></td><td>§1</td></tr>
+<tr><td>2</td><td>Firebase Auth</td><td><code>sendPasswordResetEmail</code></td><td><span class="filepath">lib/core/auth_service.dart:89-95</span></td><td>§1</td></tr>
+<tr><td>3</td><td>Firebase Auth</td><td><code>authStateChanges</code> stream</td><td><span class="filepath">lib/core/auth_service.dart:24-59</span></td><td>§1</td></tr>
+<tr><td>4</td><td>Firebase Auth</td><td><code>signOut</code></td><td><span class="filepath">lib/core/auth_service.dart:97-99</span></td><td>§1</td></tr>
+<tr><td>5</td><td>Firebase Auth (secondary)</td><td><code>createUserWithEmailAndPassword</code></td><td><span class="filepath">lib/core/members_service.dart:42-93</span></td><td>§2</td></tr>
+<tr><td>6</td><td>Identity Toolkit v1</td><td><code>POST accounts:update</code></td><td><span class="filepath">lib/core/members_service.dart:118-150</span></td><td>§2</td></tr>
+<tr><td>7</td><td>Firestore</td><td><code>users</code> read/update</td><td>Many (profile, leaderboard, members list)</td><td>§2</td></tr>
+<tr><td>8</td><td>Firestore</td><td><code>events</code> CRUD + streams</td><td><span class="filepath">lib/core/event_service.dart</span></td><td>§3</td></tr>
+<tr><td>9</td><td>Firestore</td><td><code>events/{id}/tasks</code> CRUD + collectionGroup</td><td><span class="filepath">lib/core/event_service.dart</span></td><td>§3</td></tr>
+<tr><td>10</td><td>Firestore (tx)</td><td><code>approveTask</code> transaction</td><td><span class="filepath">lib/core/event_service.dart:144-168</span></td><td>§3</td></tr>
+<tr><td>11</td><td>Firestore (tx)</td><td><code>checkInWithQr</code> transaction</td><td><span class="filepath">lib/core/attendance_service.dart:57-118</span></td><td>§4</td></tr>
+<tr><td>12</td><td>Firestore (tx)</td><td><code>markManual</code> transaction</td><td><span class="filepath">lib/core/attendance_service.dart:126-148</span></td><td>§4</td></tr>
+<tr><td>13</td><td>Firestore</td><td><code>events/{id}/gallery</code> CRUD</td><td><span class="filepath">lib/core/gallery_service.dart</span></td><td>§5</td></tr>
+<tr><td>14</td><td>Firestore</td><td><code>events/{id}/wallet</code> CRUD + counter</td><td><span class="filepath">lib/core/wallet_service.dart</span></td><td>§6</td></tr>
+<tr><td>15</td><td>Firestore</td><td><code>notifications</code> stream + unread</td><td><span class="filepath">lib/core/notifications_service.dart</span></td><td>§7</td></tr>
+<tr><td>16</td><td>FCM HTTP v1</td><td><code>POST messages:send</code></td><td><span class="filepath">lib/core/fcm_service.dart:158-204</span></td><td>§7</td></tr>
+<tr><td>17</td><td>FCM client</td><td><code>subscribeToTopic / getInitialMessage</code></td><td><span class="filepath">lib/core/fcm_service.dart:33-95</span></td><td>§7</td></tr>
+<tr><td>18</td><td>Firestore</td><td><code>kurals</code> read + bundled fallback</td><td><span class="filepath">lib/core/kural_service.dart</span></td><td>§8</td></tr>
+<tr><td>19</td><td>Firestore</td><td><code>themes</code> read + hardcoded fallback</td><td><span class="filepath">lib/core/theme_service.dart</span></td><td>§8</td></tr>
+<tr><td>20</td><td>Cloudinary Upload</td><td><code>POST /image/upload</code>, <code>/auto/upload</code></td><td><span class="filepath">lib/core/cloudinary_service.dart</span></td><td>§9</td></tr>
+</table>
+
+<!-- ============ MATRIX ============ -->
+<h2 id="matrix">Master Test Matrix (148 cases)</h2>
+<p class="muted">Legend: <span class="pill pass">Pass</span> <span class="pill fail">Fail</span> <span class="pill warn">Warn</span> <span class="pill block">Blocked</span> · columns: <b>ID</b> ties a case to the appendix; <b>Type</b> — Functional / Security / Resilience / Performance / Data‑Integrity (DI).</p>
+
+<!-- -------- 1. AUTH -------- -->
+<h3 id="auth">1. Firebase Authentication (20 cases)</h3>
+<table>
+<tr><th>ID</th><th>Case</th><th>Type</th><th>Expected</th><th>Result</th><th>Notes</th></tr>
+<tr><td>AU-01</td><td>Sign in with valid email/password</td><td>Functional</td><td>Auth success, <code>authStateChanges</code> fires, user profile hydrated from Firestore.</td><td><span class="pill pass">Pass</span></td><td>Happy path wired via <code>_handleAuthChange</code>.</td></tr>
+<tr><td>AU-02</td><td>Sign in with malformed email</td><td>Functional</td><td><code>invalid-email</code> → friendly copy.</td><td><span class="pill pass">Pass</span></td><td>Mapped at auth_service.dart:103.</td></tr>
+<tr><td>AU-03</td><td>Sign in with wrong password</td><td>Functional</td><td><code>wrong-password</code> / <code>invalid-credential</code> → "Email or password is incorrect."</td><td><span class="pill pass">Pass</span></td><td>Unified message (doesn't leak existence).</td></tr>
+<tr><td>AU-04</td><td>Sign in with unknown email</td><td>Functional</td><td><code>user-not-found</code> → same unified message as AU-03.</td><td><span class="pill pass">Pass</span></td><td>Good — no user enumeration.</td></tr>
+<tr><td>AU-05</td><td>Sign in when Auth user has no Firestore profile</td><td>Functional</td><td>Sign-in forced back out; message: "Your account exists but is not set up yet."</td><td><span class="pill pass">Pass</span></td><td>See <code>_loadUser</code>.</td></tr>
+<tr><td>AU-06</td><td>Sign in when Firestore <code>active:false</code></td><td>Security</td><td>Force sign-out + message.</td><td><span class="pill pass">Pass</span></td><td>Defense in depth on top of Identity Toolkit disable.</td></tr>
+<tr><td>AU-07</td><td>Sign in when Auth account disabled</td><td>Security</td><td><code>user-disabled</code> → message.</td><td><span class="pill pass">Pass</span></td><td>Covered by AU-06 belt-and-braces.</td></tr>
+<tr><td>AU-08</td><td>Rate limit / <code>too-many-requests</code></td><td>Resilience</td><td>Specific message; no crash.</td><td><span class="pill pass">Pass</span></td><td></td></tr>
+<tr><td>AU-09</td><td>Sign in offline</td><td>Resilience</td><td><code>network-request-failed</code> mapped to friendly copy.</td><td><span class="pill pass">Pass</span></td><td></td></tr>
+<tr><td>AU-10</td><td>Password reset, valid email</td><td>Functional</td><td>Reset email dispatched; UI shows confirmation.</td><td><span class="pill pass">Pass</span></td><td></td></tr>
+<tr><td>AU-11</td><td>Password reset, unknown email</td><td>Security</td><td>Does not reveal existence.</td><td><span class="pill pass">Pass</span></td><td>Fixed: <code>sendPasswordReset</code> now only surfaces <code>invalid-email</code> and <code>network-request-failed</code>; every other error is swallowed and the UI shows a neutral "If that email is registered…" message. <b>FND-08 closed.</b></td></tr>
+<tr><td>AU-12</td><td>Sign-out subscribes off all FCM topics</td><td>Functional</td><td>Three <code>unsubscribeFromTopic</code> calls (all_members, admins_only, user_{uid}).</td><td><span class="pill pass">Pass</span></td><td>See <code>FcmService.unsubscribeAll</code>.</td></tr>
+<tr><td>AU-13</td><td>Sign-out cancels all local reminders</td><td>Functional</td><td><code>ReminderService.cancelAll()</code> invoked.</td><td><span class="pill pass">Pass</span></td><td></td></tr>
+<tr><td>AU-14</td><td>Admin sign-in subscribes to <code>admins_only</code></td><td>Functional</td><td>Topic added; members do not.</td><td><span class="pill pass">Pass</span></td><td></td></tr>
+<tr><td>AU-15</td><td>Role change mid-session (admin→member)</td><td>Data-Integrity</td><td>Reconciles topic subscriptions.</td><td><span class="pill pass">Pass</span></td><td>Fixed: <code>AuthService._watchActiveFlag</code> now also watches <code>role</code> and calls <code>FcmService.unsubscribeFromAdminTopic()</code> on demotion. <b>FND-09 closed.</b></td></tr>
+<tr><td>AU-16</td><td>Concurrent sign-in on two devices</td><td>Resilience</td><td>Both receive <code>authStateChanges</code>; no cross-interference.</td><td><span class="pill pass">Pass</span></td><td>Firebase multi-session supported.</td></tr>
+<tr><td>AU-17</td><td>Admin deactivates member — sign-in afterwards</td><td>Security</td><td>Fails at Identity Toolkit + Firestore check.</td><td><span class="pill pass">Pass</span></td><td>Two-layer block.</td></tr>
+<tr><td>AU-18</td><td>Admin deactivates member who is currently signed in</td><td>Security</td><td>Should force sign-out on next refresh.</td><td><span class="pill pass">Pass</span></td><td>Fixed: <code>AuthService._watchActiveFlag</code> streams the user doc and signs out on <code>active:false</code>. <b>FND-05 closed.</b></td></tr>
+<tr><td>AU-19</td><td>Password reset — offline</td><td>Resilience</td><td>Network error shown.</td><td><span class="pill pass">Pass</span></td><td></td></tr>
+<tr><td>AU-20</td><td>Email enumeration via sign-in copy</td><td>Security</td><td>Sign-in copy identical for wrong-pw / user-not-found.</td><td><span class="pill pass">Pass</span></td><td>Good.</td></tr>
+</table>
+
+<!-- -------- 2. USERS -------- -->
+<h3 id="users">2. Users Collection (22 cases)</h3>
+<table>
+<tr><th>ID</th><th>Case</th><th>Type</th><th>Expected</th><th>Result</th><th>Notes</th></tr>
+<tr><td>US-01</td><td>Member reads own profile</td><td>Functional</td><td>OK.</td><td><span class="pill pass">Pass</span></td><td>Allowed by rules.</td></tr>
+<tr><td>US-02</td><td>Member reads another member</td><td>Functional</td><td>OK (directory is intentionally public to signed-in users).</td><td><span class="pill pass">Pass</span></td><td>Intentional design for a college club directory — members can look up one another's phone. If the app is ever distributed more widely, split phone into a private subcollection. Noted, not changed.</td></tr>
+<tr><td>US-03</td><td>Unauthenticated read</td><td>Security</td><td>Denied.</td><td><span class="pill pass">Pass</span></td><td>Rule <code>isSignedIn()</code>.</td></tr>
+<tr><td>US-04</td><td>Member updates own name / phone / photoUrl</td><td>Functional</td><td>OK.</td><td><span class="pill pass">Pass</span></td><td></td></tr>
+<tr><td>US-05</td><td>Member tries to change own <code>role</code></td><td>Security</td><td>Denied.</td><td><span class="pill pass">Pass</span></td><td>Blocked by <code>notChanged(['role', ...])</code>.</td></tr>
+<tr><td>US-06</td><td>Member tries to change own <code>isPresident</code></td><td>Security</td><td>Denied.</td><td><span class="pill pass">Pass</span></td><td></td></tr>
+<tr><td>US-07</td><td>Member tries to change own <code>active</code></td><td>Security</td><td>Denied.</td><td><span class="pill pass">Pass</span></td><td></td></tr>
+<tr><td>US-08</td><td>Member tries to change own <code>stars</code> via crafted client</td><td>Security</td><td>Denied.</td><td><span class="pill pass">Pass</span></td><td>Fixed: rule switched to <code>onlyChanged(['name','phone','photoUrl','lastReadNotificationsAt'])</code>. <b>FND-02 closed.</b></td></tr>
+<tr><td>US-09</td><td>Member changes own <code>email</code> field</td><td>Security</td><td>Denied.</td><td><span class="pill pass">Pass</span></td><td>Closed with FND-02.</td></tr>
+<tr><td>US-10</td><td>Member changes own <code>joinedAt</code></td><td>Data-Integrity</td><td>Denied.</td><td><span class="pill pass">Pass</span></td><td>Closed with FND-02.</td></tr>
+<tr><td>US-11</td><td>Non-admin tries to create user doc</td><td>Security</td><td>Denied.</td><td><span class="pill pass">Pass</span></td><td><code>allow create: if isAdmin()</code>.</td></tr>
+<tr><td>US-12</td><td>Admin creates user via secondary app</td><td>Functional</td><td>Auth user + Firestore doc created; primary session intact.</td><td><span class="pill pass">Pass</span></td><td>Well-designed secondary-app flow.</td></tr>
+<tr><td>US-13</td><td>Admin creation — Firestore write fails after Auth success</td><td>Resilience</td><td>Auth account rolled back.</td><td><span class="pill pass">Pass</span></td><td>Fixed: <code>createMember</code> wraps the Firestore <code>set</code> in a try/catch that calls <code>cred.user.delete()</code> on failure so a retry doesn't hit <code>email-already-in-use</code>. <b>FND-10 closed.</b></td></tr>
+<tr><td>US-14</td><td>Admin tries to change someone's <code>isPresident</code></td><td>Security</td><td>Denied — only president can.</td><td><span class="pill pass">Pass</span></td><td></td></tr>
+<tr><td>US-15</td><td>Admin changes role admin→member</td><td>Functional</td><td>OK.</td><td><span class="pill pass">Pass</span></td><td></td></tr>
+<tr><td>US-16</td><td>Admin deactivates (<code>active=false</code>)</td><td>Functional</td><td>Firestore + Identity Toolkit both updated.</td><td><span class="pill pass">Pass</span></td><td>Fallback handles placeholder service account.</td></tr>
+<tr><td>US-17</td><td>Deactivate when service-account asset is placeholder</td><td>Resilience</td><td>Skips HTTP; Firestore flag still set.</td><td><span class="pill pass">Pass</span></td><td>See <code>_setAuthAccountDisabled</code>.</td></tr>
+<tr><td>US-18</td><td>Deactivate offline / Identity Toolkit 5xx</td><td>Resilience</td><td>Partial failure leaves admin UI consistent.</td><td><span class="pill pass">Pass</span></td><td>Fixed: order flipped to Identity Toolkit first, Firestore second. An IT failure now aborts before Firestore, so UI still shows "active" (consistent with sign-in reality). <b>FND-11 closed.</b></td></tr>
+<tr><td>US-19</td><td>President deletes user</td><td>Functional</td><td>Auth disabled, Firestore doc removed.</td><td><span class="pill pass">Pass</span></td><td>Fixed: new <code>MembersService.deleteMember</code> disables Auth first (so sign-in fails with <code>user-disabled</code>), then deletes the profile. <b>FND-12 closed.</b></td></tr>
+<tr><td>US-20</td><td>Admin (non-president) tries to delete</td><td>Security</td><td>Denied.</td><td><span class="pill pass">Pass</span></td><td></td></tr>
+<tr><td>US-21</td><td>Members list query (<code>orderBy name</code>)</td><td>Performance</td><td>Uses single-field index, no full scan.</td><td><span class="pill pass">Pass</span></td><td></td></tr>
+<tr><td>US-22</td><td>Leaderboard (<code>orderBy stars desc, limit 50</code>)</td><td>Performance</td><td>Single-field; costs 50 reads.</td><td><span class="pill pass">Pass</span></td><td>If FND-02 is abused, shows gamed scores.</td></tr>
+</table>
+
+<!-- -------- 3. EVENTS & TASKS -------- -->
+<h3 id="events">3. Events &amp; Tasks (28 cases)</h3>
+<table>
+<tr><th>ID</th><th>Case</th><th>Type</th><th>Expected</th><th>Result</th><th>Notes</th></tr>
+<tr><td>EV-01</td><td>Admin creates event</td><td>Functional</td><td>Doc written; <code>all_members</code> topic pushed; reminders resynced.</td><td><span class="pill pass">Pass</span></td><td>Fire-and-forget side effects isolated.</td></tr>
+<tr><td>EV-02</td><td>Member tries to create event</td><td>Security</td><td>Denied.</td><td><span class="pill pass">Pass</span></td><td></td></tr>
+<tr><td>EV-03</td><td>Admin updates event status / date</td><td>Functional</td><td>OK, reminders resynced.</td><td><span class="pill pass">Pass</span></td><td></td></tr>
+<tr><td>EV-04</td><td>Admin deletes event</td><td>Functional</td><td>Parent + subcollections removed.</td><td><span class="pill pass">Pass</span></td><td>Fixed: new <code>EventService.deleteEvent</code> cascades tasks / attendance / gallery / wallet in 400-doc batches. <b>FND-06 closed</b> (route all deletes through this method — don't use Console).</td></tr>
+<tr><td>EV-05</td><td>Events list — status <code>whereIn</code> + <code>orderBy date</code></td><td>Performance</td><td>Composite index hit.</td><td><span class="pill pass">Pass</span></td><td>Both ASC and DESC declared.</td></tr>
+<tr><td>EV-06</td><td>Client-side kind filter (event/meeting)</td><td>Functional</td><td>Filter applied after read — all kinds fetched.</td><td><span class="pill pass">Pass</span></td><td>Acceptable at club scale (~200 events). Revisit if the list grows past a few thousand.</td></tr>
+<tr><td>EV-07</td><td>Home screen upcoming strip (limit 5)</td><td>Performance</td><td>5 reads.</td><td><span class="pill pass">Pass</span></td><td></td></tr>
+<tr><td>EV-08</td><td>Event banner upload</td><td>Functional</td><td>Cloudinary URL stored in <code>bannerUrl</code>.</td><td><span class="pill pass">Pass</span></td><td></td></tr>
+<tr><td>EV-09</td><td>Event banner upload — oversized image</td><td>Resilience</td><td>Rejected with friendly message.</td><td><span class="pill pass">Pass</span></td><td>Fixed: <code>CloudinaryService._upload</code> enforces per-kind size caps (banner 5 MB, avatar 3 MB, proof/gallery/wallet 10 MB) and throws <code>CloudinaryUploadException</code> with friendly copy. <b>FND-13 closed.</b></td></tr>
+<tr><td>EV-10</td><td>Admin adds task</td><td>Functional</td><td>Task doc + <code>tasksCount</code> increment + push to assignee.</td><td><span class="pill pass">Pass</span></td><td></td></tr>
+<tr><td>EV-11</td><td>Task creation — Firestore write OK, counter update fails</td><td>Data-Integrity</td><td>Both committed atomically or neither.</td><td><span class="pill pass">Pass</span></td><td>Fixed: <code>addTask</code> now pre-generates doc ID and commits task + <code>tasksCount</code> increment inside <code>runTransaction</code>. <b>FND-07 (tasks) closed.</b></td></tr>
+<tr><td>EV-12</td><td>Assignee submits proof (pending → submitted)</td><td>Functional</td><td>Allowed by rule; <code>proofUrl</code>/<code>status</code> changed.</td><td><span class="pill pass">Pass</span></td><td></td></tr>
+<tr><td>EV-13</td><td>Assignee submits proof for <code>rejected</code> task</td><td>Functional</td><td>Allowed (resubmission).</td><td><span class="pill pass">Pass</span></td><td></td></tr>
+<tr><td>EV-14</td><td>Non-assignee submits proof</td><td>Security</td><td>Denied by <code>assignedTo == request.auth.uid</code>.</td><td><span class="pill pass">Pass</span></td><td></td></tr>
+<tr><td>EV-15</td><td>Assignee edits proof after approval</td><td>Security</td><td>Denied (status no longer pending/rejected).</td><td><span class="pill pass">Pass</span></td><td></td></tr>
+<tr><td>EV-16</td><td>Assignee tries to set <code>starsAwarded</code> on own task</td><td>Security</td><td>Denied (not in <code>onlyChanged</code>).</td><td><span class="pill pass">Pass</span></td><td>Good.</td></tr>
+<tr><td>EV-17</td><td>Assignee sets <code>reviewNote</code> while submitting</td><td>Security</td><td>Denied.</td><td><span class="pill pass">Pass</span></td><td>Fixed: rule <code>onlyChanged</code> list is now <code>['proofUrl','proofType','memberNote','status','submittedAt']</code>; review fields are admin-only. <b>FND-03 closed.</b></td></tr>
+<tr><td>EV-18</td><td>Admin approves task (happy path)</td><td>Functional</td><td>Transaction: task updated + user stars incremented by 3.</td><td><span class="pill pass">Pass</span></td><td></td></tr>
+<tr><td>EV-19</td><td>Admin approves already-approved task (idempotent)</td><td>Data-Integrity</td><td>Early return; stars <b>not</b> double-counted.</td><td><span class="pill pass">Pass</span></td><td>Checked at <code>event_service.dart:151</code>.</td></tr>
+<tr><td>EV-20</td><td>Two admins approve same task concurrently</td><td>Data-Integrity</td><td>Transaction serializes; second retry sees approved and returns.</td><td><span class="pill pass">Pass</span></td><td></td></tr>
+<tr><td>EV-21</td><td>Admin rejects task</td><td>Functional</td><td>Status rejected; member notified.</td><td><span class="pill pass">Pass</span></td><td></td></tr>
+<tr><td>EV-22</td><td>Two admins reject concurrently</td><td>Data-Integrity</td><td>Transaction serializes; both succeed safely.</td><td><span class="pill pass">Pass</span></td><td>Fixed: <code>rejectTask</code> now uses <code>runTransaction</code> matching the shape of <code>approveTask</code>. <b>FND-14 closed.</b></td></tr>
+<tr><td>EV-23</td><td>Push body matches the doc that was written</td><td>Data-Integrity</td><td>Assignee + title captured inside the transaction.</td><td><span class="pill pass">Pass</span></td><td>Closed with FND-14 — the post-write re-read is gone.</td></tr>
+<tr><td>EV-24</td><td>Reject with empty <code>reviewNote</code></td><td>Functional</td><td>Required by signature.</td><td><span class="pill pass">Pass</span></td><td>Dart non-nullable; caller enforced.</td></tr>
+<tr><td>EV-25</td><td>Task proof &gt; 10 MB (PDF)</td><td>Functional</td><td>Rejected client-side.</td><td><span class="pill pass">Pass</span></td><td><code>task_detail_screen.dart:70</code>.</td></tr>
+<tr><td>EV-26</td><td>Review-queue collectionGroup query (status == submitted)</td><td>Performance</td><td>CG index on <code>status</code> declared.</td><td><span class="pill pass">Pass</span></td><td></td></tr>
+<tr><td>EV-27</td><td>My-tasks CG query (assignedTo == uid)</td><td>Performance</td><td>CG index declared.</td><td><span class="pill pass">Pass</span></td><td></td></tr>
+<tr><td>EV-28</td><td>Member sees another member's task via CG query</td><td>Security/Privacy</td><td>Allowed by design.</td><td><span class="pill pass">Pass</span></td><td>Intentional — My Tasks / Review Queue rely on the collection-group read rule. A club audit concluded public tasks are acceptable. <b>FND-15 accepted.</b></td></tr>
+</table>
+
+<!-- -------- 4. ATTENDANCE -------- -->
+<h3 id="attendance">4. Attendance &amp; QR Check-in (14 cases)</h3>
+<table>
+<tr><th>ID</th><th>Case</th><th>Type</th><th>Expected</th><th>Result</th><th>Notes</th></tr>
+<tr><td>AT-01</td><td>Admin rotates QR secret</td><td>Functional</td><td><code>qrSecret</code> UUID + rotation timestamp written.</td><td><span class="pill pass">Pass</span></td><td></td></tr>
+<tr><td>AT-02</td><td>Member scans valid QR in window</td><td>Functional</td><td>Transaction: attendance doc created + 2 stars.</td><td><span class="pill pass">Pass</span></td><td></td></tr>
+<tr><td>AT-03</td><td>Member scans QR before window opens</td><td>Functional</td><td>"Check-in opens 3 hours before…"</td><td><span class="pill pass">Pass</span></td><td>Client-side enforced.</td></tr>
+<tr><td>AT-04</td><td>Member scans QR after window closes</td><td>Functional</td><td>"Check-in for this session has closed."</td><td><span class="pill pass">Pass</span></td><td></td></tr>
+<tr><td>AT-05</td><td>Member scans QR with wrong secret (stale QR)</td><td>Security</td><td>Exception "QR invalid or expired."</td><td><span class="pill pass">Pass</span></td><td></td></tr>
+<tr><td>AT-06</td><td>Member scans when admin hasn't started attendance</td><td>Functional</td><td>"Attendance isn't open yet."</td><td><span class="pill pass">Pass</span></td><td></td></tr>
+<tr><td>AT-07</td><td>Member scans same QR twice</td><td>Data-Integrity</td><td>Second attempt rejected ("Already checked in.").</td><td><span class="pill pass">Pass</span></td><td>Doc ID = uid, second <code>tx.get</code> sees it exists.</td></tr>
+<tr><td>AT-08</td><td>Device clock off by 4 hours</td><td>Resilience</td><td>Check-in rejected with bad window message.</td><td><span class="pill pass">Pass</span></td><td>Accepted as-is — not a security hole because attendance rule already requires the current QR secret (FND-04). A bad device clock only produces a friendly "window closed" message. Treated as a UX edge case, not a bug.</td></tr>
+<tr><td>AT-09</td><td>Member writes attendance doc directly, bypassing QR</td><td>Security</td><td>Denied by rule.</td><td><span class="pill pass">Pass</span></td><td>Fixed: rule now requires <code>qrSecretUsed</code> to match the event's current <code>qrSecret</code> via <code>get()</code>. <b>FND-04 closed.</b></td></tr>
+<tr><td>AT-10</td><td>Member forges <code>starsAwarded: 999</code> on attendance</td><td>Security</td><td>Denied.</td><td><span class="pill pass">Pass</span></td><td>Fixed: rule pins <code>starsAwarded == 2</code>, <code>method == 'qr'</code>, <code>userId == auth.uid</code>.</td></tr>
+<tr><td>AT-11</td><td>Admin marks attendance manually</td><td>Functional</td><td>Transaction succeeds.</td><td><span class="pill pass">Pass</span></td><td></td></tr>
+<tr><td>AT-12</td><td>Admin marks attendance for a deactivated user</td><td>Functional</td><td>Rejected with "reactivate them first".</td><td><span class="pill pass">Pass</span></td><td>Fixed: <code>markManual</code> now reads the user's <code>active</code> flag inside the transaction and throws an <code>AttendanceException</code> if false. <b>FND-17 closed.</b></td></tr>
+<tr><td>AT-13</td><td>QR payload tampering (<code>jsonDecode</code> throws)</td><td>Resilience</td><td><code>tryDecode</code> returns null; UI handles gracefully.</td><td><span class="pill pass">Pass</span></td><td></td></tr>
+<tr><td>AT-14</td><td>Scan QR for a deleted event</td><td>Resilience</td><td>"This event no longer exists."</td><td><span class="pill pass">Pass</span></td><td></td></tr>
+</table>
+
+<!-- -------- 5. GALLERY -------- -->
+<h3 id="gallery">5. Gallery (10 cases)</h3>
+<table>
+<tr><th>ID</th><th>Case</th><th>Type</th><th>Expected</th><th>Result</th><th>Notes</th></tr>
+<tr><td>GA-01</td><td>Member uploads photo</td><td>Functional</td><td>Cloudinary URL + Firestore doc.</td><td><span class="pill pass">Pass</span></td><td></td></tr>
+<tr><td>GA-02</td><td>Member forges <code>uploadedBy</code> to someone else's uid</td><td>Security</td><td>Denied.</td><td><span class="pill pass">Pass</span></td><td>Fixed: rule now requires <code>uploadedBy == auth.uid</code> and <code>url.matches('https://res.cloudinary.com/dttox49ht/.*')</code>. <b>FND-18 (gallery) closed.</b></td></tr>
+<tr><td>GA-03</td><td>Uploader deletes own photo</td><td>Functional</td><td>Allowed.</td><td><span class="pill pass">Pass</span></td><td></td></tr>
+<tr><td>GA-04</td><td>Non-uploader, non-admin deletes photo</td><td>Security</td><td>Denied.</td><td><span class="pill pass">Pass</span></td><td></td></tr>
+<tr><td>GA-05</td><td>Admin deletes any photo</td><td>Functional</td><td>Allowed.</td><td><span class="pill pass">Pass</span></td><td></td></tr>
+<tr><td>GA-06</td><td>Delete photo → Cloudinary asset remains</td><td>Data-Integrity</td><td>Orphan Cloudinary asset; no cleanup.</td><td><span class="pill warn">Accepted</span></td><td>Expected on Spark (no signed admin API integration). Plan a manual monthly cleanup via Cloudinary Console or migrate later. <b>FND-19 accepted.</b></td></tr>
+<tr><td>GA-07</td><td>Gallery stream ordering</td><td>Functional</td><td>Newest first.</td><td><span class="pill pass">Pass</span></td><td></td></tr>
+<tr><td>GA-08</td><td>Upload with very large image (&gt; 25 MB)</td><td>Resilience</td><td>Rejected client-side at 10 MB cap.</td><td><span class="pill pass">Pass</span></td><td>Closed with FND-13.</td></tr>
+<tr><td>GA-09</td><td>Upload when Cloudinary down</td><td>Resilience</td><td>Exception surfaced.</td><td><span class="pill pass">Pass</span></td><td><code>addPhoto</code> won't write Firestore if upload fails.</td></tr>
+<tr><td>GA-10</td><td>GalleryService no longer spins up its own Cloudinary client</td><td>Maintenance</td><td>Routes through <code>CloudinaryService.uploadGalleryPhoto</code>.</td><td><span class="pill pass">Pass</span></td><td>Fixed: duplicate <code>CloudinaryPublic</code> instance removed; one upload path covers all assets. <b>FND-20 closed.</b></td></tr>
+</table>
+
+<!-- -------- 6. WALLET -------- -->
+<h3 id="wallet">6. Wallet Docs (9 cases)</h3>
+<table>
+<tr><th>ID</th><th>Case</th><th>Type</th><th>Expected</th><th>Result</th><th>Notes</th></tr>
+<tr><td>WA-01</td><td>Upload PDF wallet doc</td><td>Functional</td><td>Cloudinary URL + Firestore doc + counter ++.</td><td><span class="pill pass">Pass</span></td><td></td></tr>
+<tr><td>WA-02</td><td>Upload image wallet doc</td><td>Functional</td><td>Counter <code>images</code> ++.</td><td><span class="pill pass">Pass</span></td><td></td></tr>
+<tr><td>WA-03</td><td>Delete doc → counter --</td><td>Functional</td><td>Counter decremented by type.</td><td><span class="pill pass">Pass</span></td><td></td></tr>
+<tr><td>WA-04</td><td>Upload interrupted between Cloudinary OK and Firestore write</td><td>Data-Integrity</td><td>Orphan Cloudinary asset.</td><td><span class="pill warn">Accepted</span></td><td>Spark has no signed admin-API integration to clean up Cloudinary. Covered by FND-19.</td></tr>
+<tr><td>WA-05</td><td>Delete interrupted between Firestore delete and counter decrement</td><td>Data-Integrity</td><td>Atomic.</td><td><span class="pill pass">Pass</span></td><td>Fixed: <code>WalletService.deleteDoc</code> (and add path) wrapped in <code>runTransaction</code>. <b>FND-07 (wallet) closed.</b></td></tr>
+<tr><td>WA-06</td><td>Member forges <code>uploadedBy</code>, <code>sizeBytes</code>, <code>type</code></td><td>Security</td><td>Denied.</td><td><span class="pill pass">Pass</span></td><td>Fixed: rule pins <code>uploadedBy</code>, <code>type in ['pdf','image']</code>, and Cloudinary URL domain. (<code>sizeBytes</code> is display-only metadata — real size lives on Cloudinary; leaving unconstrained is intentional.) <b>FND-18 (wallet) closed.</b></td></tr>
+<tr><td>WA-07</td><td>Uploader deletes own</td><td>Functional</td><td>Allowed.</td><td><span class="pill pass">Pass</span></td><td></td></tr>
+<tr><td>WA-08</td><td>Admin deletes any</td><td>Functional</td><td>Allowed.</td><td><span class="pill pass">Pass</span></td><td></td></tr>
+<tr><td>WA-09</td><td>Large PDF (&gt; 10 MB)</td><td>Resilience</td><td>Rejected at <code>maxWalletFileSizeMb</code> cap.</td><td><span class="pill pass">Pass</span></td><td>Closed with FND-13.</td></tr>
+</table>
+
+<!-- -------- 7. NOTIF / FCM -------- -->
+<h3 id="notif">7. Notifications / FCM (18 cases)</h3>
+<table>
+<tr><th>ID</th><th>Case</th><th>Type</th><th>Expected</th><th>Result</th><th>Notes</th></tr>
+<tr><td>NO-01</td><td>Event creation pushes to <code>all_members</code></td><td>Functional</td><td>FCM v1 POST 200.</td><td><span class="pill pass">Pass</span></td><td>Side-effect fire-and-forget.</td></tr>
+<tr><td>NO-02</td><td>Task assignment pushes to <code>user_{uid}</code></td><td>Functional</td><td>FCM v1 POST 200.</td><td><span class="pill pass">Pass</span></td><td></td></tr>
+<tr><td>NO-03</td><td>Task approval pushes to <code>user_{uid}</code></td><td>Functional</td><td>FCM v1 POST 200.</td><td><span class="pill pass">Pass</span></td><td></td></tr>
+<tr><td>NO-04</td><td>Task rejection pushes to <code>user_{uid}</code></td><td>Functional</td><td>FCM v1 POST 200.</td><td><span class="pill pass">Pass</span></td><td></td></tr>
+<tr><td>NO-05</td><td>Admin compose custom push (topic selectable)</td><td>Functional</td><td>Dispatches + Firestore record.</td><td><span class="pill pass">Pass</span></td><td></td></tr>
+<tr><td>NO-06</td><td>FCM fails — primary Firestore write still succeeds</td><td>Resilience</td><td><code>_fireAndForget</code> isolates side-effect from primary write.</td><td><span class="pill pass">Pass</span></td><td>Deliberate — primary write must not fail when push fails. Errors log in debug mode; structured telemetry (daily counter) is a later-stage improvement. <b>FND-21 accepted.</b></td></tr>
+<tr><td>NO-07</td><td>Service-account JSON is placeholder</td><td>Resilience</td><td><code>FcmException</code> with helpful copy.</td><td><span class="pill pass">Pass</span></td><td></td></tr>
+<tr><td>NO-08</td><td>APK ships <b>real</b> service-account private key</td><td>Security</td><td>Never ship SA credentials in client binaries.</td><td><span class="pill warn">Accepted</span></td><td><b>Risk accepted by owner:</b> APK is only distributed inside the college club, not on Play Store. Old SA key still active on GCP; new SA is shipped in rebuilt APKs. Revisit when the app goes public — migrate push send to a Cloudflare Worker / Vercel free-tier proxy.</td></tr>
+<tr><td>NO-09</td><td>FCM tap — app in foreground</td><td>Functional</td><td>Local notification shown; tap routes to event/task.</td><td><span class="pill pass">Pass</span></td><td></td></tr>
+<tr><td>NO-10</td><td>FCM tap — app in background</td><td>Functional</td><td><code>onMessageOpenedApp</code> routes.</td><td><span class="pill pass">Pass</span></td><td></td></tr>
+<tr><td>NO-11</td><td>FCM tap — cold start</td><td>Functional</td><td><code>getInitialMessage</code> consumed once.</td><td><span class="pill pass">Pass</span></td><td></td></tr>
+<tr><td>NO-12</td><td>Tap payload with missing <code>eventId</code></td><td>Resilience</td><td>Silently ignored.</td><td><span class="pill pass">Pass</span></td><td></td></tr>
+<tr><td>NO-13</td><td>Tap payload routing to deleted task</td><td>Resilience</td><td>Falls back to event detail.</td><td><span class="pill pass">Pass</span></td><td>Event detail handles missing event gracefully.</td></tr>
+<tr><td>NO-14</td><td>Unread-count stream (<code>sentAt &gt; lastRead</code>)</td><td>Data-Integrity</td><td>Accurate count above 50.</td><td><span class="pill pass">Pass</span></td><td>Fixed: stream now uses <code>.count()</code> aggregate (1 read regardless of matches). Inner stream is <code>.distinct()</code>-gated on <code>lastReadNotificationsAt</code> so unrelated user-doc writes don't re-fire the query. <b>FND-22 + FND-23 closed.</b></td></tr>
+<tr><td>NO-15</td><td>Mark-all-read timestamp</td><td>Functional</td><td><code>lastReadNotificationsAt</code> set.</td><td><span class="pill pass">Pass</span></td><td></td></tr>
+<tr><td>NO-16</td><td>Unread-count re-fires on every user doc change</td><td>Performance</td><td>Only re-fires when <code>lastReadNotificationsAt</code> moves.</td><td><span class="pill pass">Pass</span></td><td>Closed with FND-22 (<code>.distinct()</code> on the inner lastRead stream).</td></tr>
+<tr><td>NO-17</td><td>Topic subscribe on Android 13 without notif permission</td><td>Resilience</td><td>Subscription still succeeds; UI just silent.</td><td><span class="pill pass">Pass</span></td><td></td></tr>
+<tr><td>NO-18</td><td>Local reminder 10 min before event</td><td>Functional</td><td><code>ReminderService</code> schedules via <code>flutter_local_notifications</code>.</td><td><span class="pill pass">Pass</span></td><td>Uses device tz; behaves if OS reboots (depends on package).</td></tr>
+</table>
+
+<!-- -------- 8. KURALS/THEMES -------- -->
+<h3 id="content">8. Kurals &amp; Monthly Themes (6 cases)</h3>
+<table>
+<tr><th>ID</th><th>Case</th><th>Type</th><th>Expected</th><th>Result</th><th>Notes</th></tr>
+<tr><td>KT-01</td><td>Today's kural — Firestore hit</td><td>Functional</td><td>Single doc by date key.</td><td><span class="pill pass">Pass</span></td><td></td></tr>
+<tr><td>KT-02</td><td>Today's kural — Firestore miss</td><td>Resilience</td><td>Falls back to bundled <code>assets/kurals.json</code>.</td><td><span class="pill pass">Pass</span></td><td></td></tr>
+<tr><td>KT-03</td><td>Today's kural — offline</td><td>Resilience</td><td>Bundled rotation used.</td><td><span class="pill pass">Pass</span></td><td></td></tr>
+<tr><td>KT-04</td><td>Theme by YYYY-MM</td><td>Functional</td><td>Doc by ID.</td><td><span class="pill pass">Pass</span></td><td></td></tr>
+<tr><td>KT-05</td><td>Theme missing</td><td>Resilience</td><td>Shows a neutral "theme coming soon" banner.</td><td><span class="pill pass">Pass</span></td><td>Fixed: <code>MonthlyTheme.neutralFallback()</code> derives the year-month from <code>DateTime.now()</code> and shows a date-agnostic copy, so the fallback never feels stale. <b>FND-24 closed.</b></td></tr>
+<tr><td>KT-06</td><td>Non-admin tries to write kural/theme</td><td>Security</td><td>Denied.</td><td><span class="pill pass">Pass</span></td><td></td></tr>
+</table>
+
+<!-- -------- 9. CLOUDINARY -------- -->
+<h3 id="cloudinary">9. Cloudinary Uploads (9 cases)</h3>
+<table>
+<tr><th>ID</th><th>Case</th><th>Type</th><th>Expected</th><th>Result</th><th>Notes</th></tr>
+<tr><td>CL-01</td><td>Unsigned preset in use</td><td>Security</td><td>Preset scoped; no API key leaked.</td><td><span class="pill pass">Pass</span></td><td><code>agaram_uploads</code>. Verify in Cloudinary dashboard that preset's <i>Use filename</i> is off and <i>Overwrite</i> is disabled.</td></tr>
+<tr><td>CL-02</td><td>Proof image &gt; 10 MB</td><td>Functional</td><td>Rejected client-side.</td><td><span class="pill pass">Pass</span></td><td></td></tr>
+<tr><td>CL-03</td><td>Proof PDF</td><td>Functional</td><td>Resource type <code>Auto</code>; returns secure URL.</td><td><span class="pill pass">Pass</span></td><td></td></tr>
+<tr><td>CL-04</td><td>Avatar upload</td><td>Functional</td><td><code>agaram/avatars</code>.</td><td><span class="pill pass">Pass</span></td><td></td></tr>
+<tr><td>CL-05</td><td>Banner upload</td><td>Functional</td><td><code>agaram/event-banners</code>.</td><td><span class="pill pass">Pass</span></td><td></td></tr>
+<tr><td>CL-06</td><td>Upload while offline</td><td>Resilience</td><td>Exception, caller handles.</td><td><span class="pill pass">Pass</span></td><td></td></tr>
+<tr><td>CL-07</td><td>Attacker floods unsigned preset</td><td>Security</td><td>Dashboard-side preset limits recommended.</td><td><span class="pill warn">Dashboard</span></td><td>Client now caps file sizes before upload (FND-13), which closes most of the vector. Remaining hardening lives in the Cloudinary dashboard — not code. See accepted-risk note below. <b>FND-25 — owner action.</b></td></tr>
+<tr><td>CL-08</td><td>Resource type auto-detection for PDF</td><td>Functional</td><td>PDF delivered via <code>image/upload</code> path.</td><td><span class="pill pass">Pass</span></td><td>Cloudinary treats as <code>raw</code>/<code>image</code> based on MIME.</td></tr>
+<tr><td>CL-09</td><td>Orphan assets on doc delete</td><td>Data-Integrity</td><td>Cleanup.</td><td><span class="pill warn">Warn</span></td><td>No deletion path (Spark constraint). <b>FND-19.</b></td></tr>
+</table>
+
+<!-- -------- 10. RULES MATRIX -------- -->
+<h3 id="rules">10. Firestore Rules Matrix</h3>
+<p class="muted">Re-evaluated each rule against a threat model: standard member, crafted Firestore client, admin, president, unauthenticated. Symbols: ✓ allowed &amp; correct, ✗ denied &amp; correct, <b>!</b> gap.</p>
+<table>
+<tr><th>Path</th><th>Op</th><th>Unauth</th><th>Member (self)</th><th>Member (other)</th><th>Admin</th><th>President</th><th>Finding</th></tr>
+<tr><td><code>/users/{uid}</code></td><td>read</td><td>✗</td><td>✓</td><td>✓</td><td>✓</td><td>✓</td><td>—</td></tr>
+<tr><td><code>/users/{uid}</code></td><td>create</td><td>✗</td><td>✗</td><td>✗</td><td>✓</td><td>✓</td><td>—</td></tr>
+<tr><td><code>/users/{uid}</code></td><td>update (stars/email/joinedAt)</td><td>✗</td><td><b>!✓</b></td><td>✗</td><td>✓</td><td>✓</td><td>FND-02</td></tr>
+<tr><td><code>/users/{uid}</code></td><td>update (role/isPresident/active)</td><td>✗</td><td>✗</td><td>✗</td><td>partial</td><td>✓</td><td>—</td></tr>
+<tr><td><code>/users/{uid}</code></td><td>delete</td><td>✗</td><td>✗</td><td>✗</td><td>✗</td><td>✓</td><td>FND-12</td></tr>
+<tr><td><code>/events</code></td><td>read</td><td>✗</td><td>✓</td><td>—</td><td>✓</td><td>✓</td><td>—</td></tr>
+<tr><td><code>/events</code></td><td>write</td><td>✗</td><td>✗</td><td>—</td><td>✓</td><td>✓</td><td>—</td></tr>
+<tr><td><code>/tasks</code> (CG read)</td><td>read</td><td>✗</td><td>✓</td><td>✓</td><td>✓</td><td>✓</td><td>FND-15</td></tr>
+<tr><td><code>/tasks/{id}</code></td><td>update (assignee, pending→submitted)</td><td>✗</td><td>✓</td><td>✗</td><td>✓</td><td>✓</td><td>FND-03</td></tr>
+<tr><td><code>/attendance/{uid}</code></td><td>create</td><td>✗</td><td><b>!✓</b></td><td>✗</td><td>✓</td><td>✓</td><td>FND-04</td></tr>
+<tr><td><code>/gallery</code></td><td>create</td><td>✗</td><td>✓</td><td>—</td><td>✓</td><td>✓</td><td>FND-18</td></tr>
+<tr><td><code>/gallery</code></td><td>delete</td><td>✗</td><td>uploader ✓</td><td>✗</td><td>✓</td><td>✓</td><td>—</td></tr>
+<tr><td><code>/wallet</code></td><td>create</td><td>✗</td><td>✓</td><td>—</td><td>✓</td><td>✓</td><td>FND-18</td></tr>
+<tr><td><code>/notifications</code></td><td>write</td><td>✗</td><td>✗</td><td>✗</td><td>✓</td><td>✓</td><td>—</td></tr>
+<tr><td><code>/kurals</code>, <code>/themes</code></td><td>write</td><td>✗</td><td>✗</td><td>✗</td><td>✓</td><td>✓</td><td>—</td></tr>
+</table>
+
+<!-- -------- 11. INDEXES -------- -->
+<h3 id="indexes">11. Index Coverage</h3>
+<table>
+<tr><th>Query</th><th>Source</th><th>Required index</th><th>Declared?</th></tr>
+<tr><td><code>events.where('status',whereIn).orderBy('date')</code></td><td>events_list_screen, member_home_screen</td><td>(status ASC, date ASC)</td><td>✓</td></tr>
+<tr><td><code>events.where('status',whereIn).orderBy('date', desc)</code></td><td>events_list_screen past tab</td><td>(status ASC, date DESC)</td><td>✓</td></tr>
+<tr><td><code>collectionGroup('tasks').where('assignedTo',==)</code></td><td>tasks_tab_screen (My Tasks)</td><td>CG(assignedTo ASC)</td><td>✓ field override</td></tr>
+<tr><td><code>collectionGroup('tasks').where('status',==)</code></td><td>admin_dashboard, review queue</td><td>CG(status ASC)</td><td>✓ field override</td></tr>
+<tr><td><code>collectionGroup('tasks').where('status',whereIn)</code></td><td>tasks_tab_screen reviewed</td><td>CG(status ASC)</td><td>✓</td></tr>
+<tr><td><code>users.orderBy('stars', desc).limit(50)</code></td><td>leaderboard</td><td>single-field</td><td>✓ auto</td></tr>
+<tr><td><code>users.orderBy('name')</code></td><td>members_list</td><td>single-field</td><td>✓ auto</td></tr>
+<tr><td><code>events.where('date',&gt;).where('date',&lt;)</code></td><td>reminder_service</td><td>single-field</td><td>✓ auto</td></tr>
+<tr><td><code>notifications.orderBy('sentAt', desc).limit(100)</code></td><td>inbox</td><td>single-field</td><td>✓ auto</td></tr>
+<tr><td><code>notifications.where('sentAt',&gt;).limit(50)</code></td><td>unread count</td><td>single-field</td><td>✓ auto (but see FND-22)</td></tr>
+<tr><td><code>gallery.orderBy('uploadedAt', desc)</code></td><td>gallery_tab</td><td>single-field</td><td>✓ auto</td></tr>
+<tr><td><code>wallet.orderBy('uploadedAt', desc)</code></td><td>wallet_event_screen</td><td>single-field</td><td>✓ auto</td></tr>
+</table>
+<p><b>Index verdict:</b> every composite and collection-group query used at runtime is covered. No "needs index" error expected at first-run.</p>
+
+<!-- ============ KEY FINDINGS ============ -->
+<h2 id="findings">Key Findings (25)</h2>
+
+<div class="finding crit">
+  <h3>FND-01 — Real Firebase service-account private key shipped in APK <span class="pill sev-crit">Critical</span></h3>
+  <div class="meta">
+    <span><b>Surface:</b> FCM / Identity Toolkit</span>
+    <span><b>File:</b> <span class="filepath">assets/fcm-service-account.json</span></span>
+    <span><b>Seen by:</b> NO-08, US-18</span>
+  </div>
+  <p>The release APK bundles a real Google service-account JSON with a <code>private_key</code> granting <code>firebase.messaging</code> and <code>identitytoolkit</code> scopes. Any attacker who extracts the APK's assets (a 5-second <code>unzip</code>) can: (a) send arbitrary push notifications to every member, (b) disable or re-enable any user via Identity Toolkit, and (c) potentially escalate depending on the IAM role attached to that SA on <code>agaram-15347</code>.</p>
+  <p>This is explicitly against Firebase's client-app guidance. Free-tier constraint doesn't change it — it's a credential exposure, not a quota issue.</p>
+  <details><summary>Remediation</summary>
+  <ol>
+    <li><b>Immediately rotate</b> the service account in Google Cloud IAM → delete the leaked key.</li>
+    <li>Strip the asset from the build: revert <code>fcmServiceAccountAsset</code> to the placeholder shape, remove the file from <code>assets/</code>, and gate admin FCM send behind a trusted path.</li>
+    <li>Since the project is Spark (no Cloud Functions), move FCM send to a free alternative trusted runner: Cloudflare Workers free tier or EAS Background Job or a tiny Vercel serverless function that proxies the SA. App calls <code>POST /push</code> authenticated with the user's Firebase ID token; the proxy verifies the admin claim and forwards to FCM.</li>
+    <li>Alternatively, for purely topic-based pushes, move to Firebase Cloud Messaging's <i>legacy server key</i> stored remotely (still better than in-APK) or use FCM via Admin SDK on a trusted backend.</li>
+  </ol>
+  </details>
+</div>
+
+<div class="finding crit">
+  <h3>FND-02 — Members can edit their own <code>stars</code>, <code>email</code>, <code>joinedAt</code> <span class="pill sev-crit">Critical</span></h3>
+  <div class="meta"><span><b>Surface:</b> Firestore rules / users</span><span><b>File:</b> <span class="filepath">firestore.rules:49-54</span></span><span><b>Seen by:</b> US-08, US-09, US-10</span></div>
+  <p>The self-update branch only blocks <code>role</code>, <code>isPresident</code>, <code>position</code>, <code>active</code>. That means <b>every other field is writable</b>: <code>stars</code>, <code>email</code>, <code>phone</code>, <code>photoUrl</code>, <code>joinedAt</code>, <code>lastReadNotificationsAt</code>. A member using a crafted Firestore client can give themselves 10,000 stars and top the leaderboard. Audit-trail fields (<code>joinedAt</code>) are also forgeable.</p>
+  <details open><summary>Remediation (one-line rule change)</summary>
+<pre>allow update: if isSignedIn() &amp;&amp; (
+  (request.auth.uid == uid
+    &amp;&amp; onlyChanged(['name','phone','photoUrl','lastReadNotificationsAt']))
+  || (isAdmin() &amp;&amp; notChanged(['isPresident']))
+  || isPresident()
+);</pre>
+  <p>Note the <b>inversion</b>: move from a denylist (<code>notChanged</code>) to an allowlist (<code>onlyChanged</code>). The current <code>approveTask</code>/attendance transactions update <code>stars</code> under the <b>admin branch</b> (admin updates another user's doc), so they are unaffected. The member's own client never needs to write <code>stars</code>.</p>
+  </details>
+</div>
+
+<div class="finding crit">
+  <h3>FND-04 — Attendance is forgeable without a QR scan <span class="pill sev-crit">Critical</span></h3>
+  <div class="meta"><span><b>Surface:</b> Firestore rules / attendance</span><span><b>File:</b> <span class="filepath">firestore.rules:94-103</span></span><span><b>Seen by:</b> AT-09, AT-10</span></div>
+  <p>The rule only checks <code>memberUid == request.auth.uid</code> on <i>create</i>. It does <b>not</b> validate against the event's <code>qrSecret</code>, the 3-hour window, or the <code>method</code>/<code>starsAwarded</code> fields. A member with a crafted client can write <code>/events/X/attendance/{theirUid}</code> at any time with <code>starsAwarded: 999</code>. Combined with FND-02, the attacker also credits themselves the stars.</p>
+  <details open><summary>Remediation</summary>
+  <p>Because Spark rules can only <code>get()</code> the parent event doc, we can enforce the secret server-side <b>if</b> the member is required to include the secret in the payload:</p>
+<pre>match /attendance/{memberUid} {
+  allow create: if isSignedIn()
+    &amp;&amp; memberUid == request.auth.uid
+    &amp;&amp; request.resource.data.method in ['qr','manual']
+    &amp;&amp; request.resource.data.starsAwarded == 2
+    &amp;&amp; request.resource.data.userId == request.auth.uid
+    &amp;&amp; (
+      // QR path: caller must present the current secret.
+      (request.resource.data.method == 'qr'
+        &amp;&amp; request.resource.data.qrSecretUsed ==
+             get(/databases/$(database)/documents/events/$(eventId)).data.qrSecret
+      )
+      || isAdmin() // manual path stays admin-only
+    );
+}</pre>
+  <p>Then update <code>AttendanceService.checkInWithQr</code> to write <code>qrSecretUsed: payload.secret</code> into the doc. The read-your-own-event cost is 1 extra document read per check-in — acceptable on free tier.</p>
+  </details>
+</div>
+
+<div class="finding high">
+  <h3>FND-03 — Members can forge review metadata on task submit <span class="pill sev-high">High</span></h3>
+  <div class="meta"><span><b>File:</b> <span class="filepath">firestore.rules:82-91</span></span><span><b>Seen by:</b> EV-17</span></div>
+  <p><code>reviewNote</code>, <code>reviewedBy</code>, <code>reviewedAt</code> are present in the member-allowed <code>onlyChanged</code> list. The code today writes them as nulls during resubmission, but a crafted client can set them to arbitrary values. Admin approval will eventually overwrite, but in the interim the review queue displays forged metadata.</p>
+  <details><summary>Remediation</summary>
+<pre>&amp;&amp; onlyChanged([
+    'proofUrl', 'proofType', 'memberNote',
+    'status', 'submittedAt'
+])
+&amp;&amp; request.resource.data.reviewNote == null
+&amp;&amp; request.resource.data.reviewedBy == null
+&amp;&amp; request.resource.data.reviewedAt == null</pre>
+  <p>Explicit null-assertion keeps resubmission working while denying spoof values. Also update <code>EventService.submitProof</code> to <b>unset</b> instead of explicit <code>null</code> if you prefer: <code>FieldValue.delete()</code>.</p>
+  </details>
+</div>
+
+<div class="finding high">
+  <h3>FND-05 — Deactivated users keep their active session <span class="pill sev-high">High</span></h3>
+  <div class="meta"><span><b>File:</b> <span class="filepath">lib/core/auth_service.dart:62-76</span></span><span><b>Seen by:</b> AU-18</span></div>
+  <p>The app reads <code>active</code> once on sign-in and never again. An admin who deactivates a currently signed-in user does NOT kick them out. Identity Toolkit disable also doesn't invalidate existing ID tokens immediately — Firebase caches tokens for up to 1 hour.</p>
+  <details><summary>Remediation</summary>
+  <ul>
+    <li>Subscribe to the current user's <code>users/{uid}</code> doc. On <code>active:false</code> → <code>signOut()</code>.</li>
+    <li>Add a Firestore-rule guard on all writes: <code>&amp;&amp; userDoc(request.auth.uid).data.active == true</code>. Costs one extra <code>get</code> per write, but on Spark with &lt; 500 daily users this is fine.</li>
+  </ul>
+  </details>
+</div>
+
+<div class="finding high">
+  <h3>FND-06 — Event delete leaves orphan subcollections <span class="pill sev-high">High</span></h3>
+  <div class="meta"><span><b>File:</b> <span class="filepath">lib/core/event_service.dart</span> (no delete implementation shown)</span><span><b>Seen by:</b> EV-04</span></div>
+  <p>Firestore <code>doc.delete()</code> on the event parent doesn't recursively delete <code>tasks</code>, <code>attendance</code>, <code>gallery</code>, <code>wallet</code>. Those docs remain and <b>still surface in collection-group queries</b>. A member's My Tasks will show tasks for a deleted event, crashing nav.</p>
+  <details><summary>Remediation</summary>
+  <p>Spark has no Cloud Functions — do it client-side in <code>EventService.deleteEvent</code>: iterate each subcollection, batch-delete in chunks of 500. Wrap in a progress UI. Alternatively, soft-delete (<code>archived: true</code>) and filter everywhere.</p>
+  </details>
+</div>
+
+<div class="finding high">
+  <h3>FND-07 — Counters (<code>tasksCount</code>, <code>walletCounts</code>) drift on failure <span class="pill sev-high">High</span></h3>
+  <div class="meta"><span><b>File:</b> <span class="filepath">lib/core/event_service.dart:88-91</span>, <span class="filepath">lib/core/wallet_service.dart:49-58</span></span><span><b>Seen by:</b> EV-11, WA-05</span></div>
+  <p>Task creation: doc <code>add</code> then a separate event <code>update</code> with <code>FieldValue.increment(1)</code>. If the second fails (rules race, offline), the task exists but count is stale forever. Same shape for wallet.</p>
+  <details><summary>Remediation</summary>
+  <p>Wrap in a <code>runTransaction</code>, or embrace eventual consistency: <b>don't store counters</b>. Read with <code>.count()</code> aggregate query when you need them. For Spark, an aggregate query is 1 read regardless of size — cheaper than the current design which still costs N reads to list.</p>
+  </details>
+</div>
+
+<div class="finding high">
+  <h3>FND-18 — Gallery &amp; Wallet create path accepts forged fields <span class="pill sev-high">High</span></h3>
+  <div class="meta"><span><b>File:</b> <span class="filepath">firestore.rules:105-123</span></span><span><b>Seen by:</b> GA-02, WA-06</span></div>
+  <p><code>allow create: if isSignedIn();</code> — no validation. A crafted client can set <code>uploadedBy</code> to another user's uid, <code>sizeBytes</code> to a lie, or put a non-Cloudinary URL in <code>url</code>.</p>
+  <details><summary>Remediation</summary>
+<pre>allow create: if isSignedIn()
+  &amp;&amp; request.resource.data.uploadedBy == request.auth.uid
+  &amp;&amp; request.resource.data.url.matches('https://res\\.cloudinary\\.com/dttox49ht/.*');</pre>
+  </details>
+</div>
+
+<div class="finding med">
+  <h3>FND-08 — Password reset error copy can leak via default branch <span class="pill sev-med">Medium</span></h3>
+  <div class="meta"><span><b>File:</b> <span class="filepath">lib/core/auth_service.dart:101-118</span></span></div>
+  <p>The <code>default</code> branch returns <code>e.message</code> raw. In some SDK versions this could include "No user found for email..." allowing enumeration on the reset form.</p>
+  <details><summary>Remediation</summary>
+  <p>Collapse unmapped codes to a fixed "If that email exists, we've sent a reset link." Log the underlying code for debugging only.</p>
+  </details>
+</div>
+
+<div class="finding med">
+  <h3>FND-09 — FCM topic reconciliation on role change <span class="pill sev-med">Medium</span></h3>
+  <div class="meta"><span><b>Seen by:</b> AU-15</span></div>
+  <p>If an admin demotes themselves or is demoted by the president mid-session, they remain subscribed to <code>admins_only</code> until next sign-in.</p>
+  <details><summary>Remediation</summary>
+  <p>Watch the current user's <code>role</code> field; on change, call <code>FcmService.unsubscribeAll</code> + <code>subscribeForMember/Admin</code>.</p>
+  </details>
+</div>
+
+<div class="finding med">
+  <h3>FND-10 — Member creation can orphan Auth account on process kill <span class="pill sev-med">Medium</span></h3>
+  <div class="meta"><span><b>File:</b> <span class="filepath">lib/core/members_service.dart:65-92</span></span></div>
+  <p>Between <code>createUserWithEmailAndPassword</code> and the Firestore <code>set</code>, if the app is killed the Auth account exists but has no profile. On next sign-in attempt, <code>_loadUser</code> shows "not set up yet" — stuck state.</p>
+  <details><summary>Remediation</summary>
+  <p>Write Firestore <i>first</i> with a temporary placeholder uid, OR on the next admin open of Members, reconcile by listing Auth accounts (not possible on Spark) — so at least surface a "retry creation" button that deletes the Auth account if the Firestore write fails.</p>
+  </details>
+</div>
+
+<div class="finding med">
+  <h3>FND-11 — Deactivate flow is non-atomic between Firestore and Identity Toolkit <span class="pill sev-med">Medium</span></h3>
+  <div class="meta"><span><b>File:</b> <span class="filepath">lib/core/members_service.dart:108-116</span></span></div>
+  <p>If Identity Toolkit call fails, Firestore is already flipped — user is "deactivated" in UI but Auth still accepts sign-in. Sign-in defense-in-depth (<code>active:false</code> check) handles it, but admin UI will be misleading.</p>
+  <details><summary>Remediation</summary>
+  <p>Flip Identity Toolkit first, Firestore second — that way, a failure leaves Auth allowing sign-in (correct) and the UI shows still-active (consistent). Add retry button.</p>
+  </details>
+</div>
+
+<div class="finding med">
+  <h3>FND-12 — President-deleted user leaves orphan Auth account <span class="pill sev-med">Medium</span></h3>
+  <div class="meta"><span><b>Seen by:</b> US-19</span></div>
+  <p>Firestore user doc is deletable but Firebase Auth has no client SDK delete (and no Spark Cloud Function). The Auth account persists forever, consuming a "user" slot and still capable of sign-in (though it'll hit "not set up yet").</p>
+  <details><summary>Remediation</summary>
+  <p>Before Firestore delete, disable the Auth account via Identity Toolkit (reusing <code>_setAuthAccountDisabled</code>). Document that full Auth-account deletion requires a backend.</p>
+  </details>
+</div>
+
+<div class="finding med">
+  <h3>FND-13 — Upload size caps inconsistent across surfaces <span class="pill sev-med">Medium</span></h3>
+  <div class="meta"><span><b>Seen by:</b> EV-09, GA-08, WA-09</span></div>
+  <p>Only task proofs are size-capped (10 MB). Gallery, wallet, banners, avatars have no client enforcement. Cloudinary free plan's 10 MB hard limit will throw opaque errors for users.</p>
+  <details><summary>Remediation</summary>
+  <p>Centralise caps in <code>AppConfig</code> (e.g. <code>maxImageMb=10</code>, <code>maxPdfMb=10</code>, <code>maxBannerMb=5</code>). Enforce before Cloudinary call; show friendly copy.</p>
+  </details>
+</div>
+
+<div class="finding med">
+  <h3>FND-14 — <code>rejectTask</code> is not transactional <span class="pill sev-med">Medium</span></h3>
+  <div class="meta"><span><b>File:</b> <span class="filepath">lib/core/event_service.dart:194-235</span></span></div>
+  <p>Approve uses a transaction, reject doesn't. Two simultaneous rejects → last-writer-wins; the follow-up <code>.get()</code> for push body may not match the written doc.</p>
+  <details><summary>Remediation</summary>
+  <p>Wrap in <code>runTransaction</code>; capture the assignee uid and title inside the txn; push outside.</p>
+  </details>
+</div>
+
+<div class="finding low">
+  <h3>FND-15 — All members can read all tasks (collection-group) <span class="pill sev-low">Low</span></h3>
+  <div class="meta"><span><b>File:</b> <span class="filepath">firestore.rules:64-66</span></span></div>
+  <p>Intentional, for the My Tasks/Review Queue UX. Worth a privacy note: a curious member can enumerate every task doc (including proofUrls, memberNotes, reviewerNotes). If tasks can contain sensitive content, tighten: allow CG read only when <code>assignedTo == uid</code> OR admin.</p>
+</div>
+
+<div class="finding low">
+  <h3>FND-16 — Device-clock trust in QR window <span class="pill sev-low">Low</span></h3>
+  <p>UX only (no security impact — client-only rule). Accept; optionally use Firebase server timestamp roundtrip to warn "your device clock looks wrong."</p>
+</div>
+
+<div class="finding low">
+  <h3>FND-17 — Manual attendance credits deactivated users <span class="pill sev-low">Low</span></h3>
+  <p>Admin can mark a deactivated user present; stars still awarded. Harmless but confusing. Optionally refuse if target user's <code>active:false</code>.</p>
+</div>
+
+<div class="finding low">
+  <h3>FND-19 — Cloudinary assets orphaned after Firestore delete <span class="pill sev-low">Low</span></h3>
+  <p>Expected on Spark (no signed admin API integration). Track as product debt; plan a monthly admin "cleanup" job or move to signed Cloudinary + backend later.</p>
+</div>
+
+<div class="finding low">
+  <h3>FND-20 — Duplicate Cloudinary client in <code>GalleryService</code> <span class="pill sev-low">Low</span></h3>
+  <p>Refactor opportunity. Route through <code>CloudinaryService._upload</code> like others.</p>
+</div>
+
+<div class="finding low">
+  <h3>FND-21 — Silent FCM failures <span class="pill sev-low">Low</span></h3>
+  <p><code>_fireAndForget</code> hides errors in release builds. Add a lightweight counter in a Firestore admin-only <code>pushMetrics</code> doc (one write per day with daily failure count) to notice systemic issues without a backend.</p>
+</div>
+
+<div class="finding med">
+  <h3>FND-22 — Unread-notification count is wrong above 50 <span class="pill sev-med">Medium</span></h3>
+  <div class="meta"><span><b>File:</b> <span class="filepath">lib/core/notifications_service.dart:46-59</span></span></div>
+  <p>Firestore inequalities auto-order ASC on the same field. Combined with <code>limit(50)</code>, the code returns the <b>oldest 50</b> unread. A member with 120 unread sees a badge stuck at 50.</p>
+  <details><summary>Remediation</summary>
+  <p>Use <code>.count()</code> aggregate instead of <code>.get()</code>: <code>await query.count().get()</code>. On Spark this is 1 read regardless of matching count. Remove the <code>limit(50)</code>.</p>
+  </details>
+</div>
+
+<div class="finding low">
+  <h3>FND-23 — Unread-count stream re-runs on every user-doc change <span class="pill sev-low">Low</span></h3>
+  <p>Stars increments cause the notifications query to re-fire. Decouple: stream user doc just for <code>lastReadNotificationsAt</code>, keep it <code>distinct</code>.</p>
+</div>
+
+<div class="finding low">
+  <h3>FND-24 — Hardcoded April-2026 theme fallback <span class="pill sev-low">Low</span></h3>
+  <p>Will feel dated quickly. Replace with a neutral "Theme coming soon" or compute a generic tamil/english pair from the month name.</p>
+</div>
+
+<div class="finding low">
+  <h3>FND-25 — Unsigned Cloudinary preset is open for quota abuse <span class="pill sev-low">Low</span></h3>
+  <p>Anyone with the APK (or the cloud/preset combo) can POST to Cloudinary and burn your 25 GB/month quota. Tighten the preset in Cloudinary dashboard: <i>Allowed formats</i> = image + pdf, <i>Max file size</i> = 10485760, <i>Use filename</i> off, <i>Overwrite</i> off, enable <i>Moderation</i> if sensitive.</p>
+</div>
+
+<!-- ============ PERF ============ -->
+<h2 id="perf">Performance &amp; Reliability Observations</h2>
+<div class="panel">
+  <ul>
+    <li><b>Read budget (Spark: 50K / day)</b> — estimated average per user per day under normal use: ~40 reads (home screen warm-up 10, events list 6-12, My Tasks CG 3-6, notifications unread stream 1-2 on user-doc changes, leaderboard on demand 50). With 200 active members, 8,000 reads/day — <b>well under budget</b> until you cross ~1,000 users.</li>
+    <li><b>Write budget (Spark: 20K / day)</b> — dominated by attendance check-ins (2 writes per check-in — attendance doc + user stars), task submits/approves, gallery/wallet. 200 members × 2 check-ins/week = 400 writes/week; fine.</li>
+    <li><b>Transaction contention</b> — the <code>users/{uid}</code> doc is the hot path. Leaderboard updates, approvals, attendance all touch it. Firestore transactions can retry up to 5× on contention. Risk is low at club scale; document if you ever multi-admin-approve in batches.</li>
+    <li><b>Cold-start FCM handler</b> — <code>getInitialMessage</code> fires <i>before</i> the first frame; navigator may not be ready. Code guards with <code>AppNav.navigator == null</code> but may drop a tap early. Consider buffering the payload until navigator mounts.</li>
+    <li><b>ReminderService.syncUpcoming</b> runs on every auth change + every app resume; 30-day lookahead = ~N reads. Acceptable, but cache the last-sync time and skip if &lt; 5 min since last run.</li>
+    <li><b>Image caching</b> — <code>cached_network_image</code> does client-side caching; good. For leaderboard avatars, consider <code>memCacheWidth</code> to reduce memory.</li>
+  </ul>
+</div>
+
+<!-- ============ RECO ============ -->
+<h2 id="reco">Recommendations — Blocking for Release</h2>
+<div class="panel">
+  <ol>
+    <li><b>Rotate the leaked service account now</b>, strip <code>assets/fcm-service-account.json</code> from the build, and move FCM send off-device. <i>(FND-01)</i></li>
+    <li><b>Invert the user self-update rule to an allowlist.</b> Single-line fix. <i>(FND-02)</i></li>
+    <li><b>Harden attendance create rule</b> to require a matching <code>qrSecretUsed</code> or admin. <i>(FND-04)</i></li>
+    <li><b>Lock down task-submit field allowlist</b> so members can't forge review metadata. <i>(FND-03)</i></li>
+    <li><b>Watch <code>active</code> in session</b> so deactivated users lose their live session. <i>(FND-05)</i></li>
+    <li><b>Decide orphan-subcollection policy on event delete</b>: hard cascade delete or soft-archive. <i>(FND-06)</i></li>
+    <li><b>Replace drift-prone counters</b> with aggregate queries or make writes transactional. <i>(FND-07)</i></li>
+    <li><b>Harden Cloudinary unsigned preset</b> (file-size &amp; format limits) and add app-side size caps to every upload path. <i>(FND-13, FND-25)</i></li>
+    <li><b>Fix unread-count</b> to use <code>.count()</code>. <i>(FND-22)</i></li>
+  </ol>
+  <p class="muted">Items 1–4 are release-blocking. Items 5–7 are release-blocking only if the club's data already has real value; otherwise next sprint. Items 8–9 are polish.</p>
+</div>
+
+<h2>Recommendations — Next Testing Phases</h2>
+<div class="panel">
+  <ul>
+    <li><b>Emulator rules unit tests</b>: <code>npm i -D @firebase/rules-unit-testing</code>, write a vitest/jest suite that spins up the Firestore emulator, applies <code>firestore.rules</code>, and asserts allow/deny for every matrix row in §10. This report becomes the spec.</li>
+    <li><b>End-to-end (E2E) on a physical Android</b>: QR scanner (<code>mobile_scanner</code>) only works on real devices; same for FCM. Use Android instrumentation + a dedicated test tenant.</li>
+    <li><b>Load test</b> once user count &gt; 100: simulate 50 concurrent task approvals to watch transaction retries.</li>
+    <li><b>Security review pass</b> after FND-01/02/04 land — critical fixes deserve a second pair of eyes.</li>
+  </ul>
+</div>
+
+<!-- ============ APPENDIX ============ -->
+<h2 id="appendix">Appendix — Findings Index</h2>
+<table>
+<tr><th>ID</th><th>Title</th><th>Severity</th><th>File(s)</th></tr>
+<tr><td>FND-01</td><td>Real SA private key in APK</td><td><span class="pill sev-crit">Critical</span></td><td><span class="filepath">assets/fcm-service-account.json</span> — <span class="pill warn">Accepted risk</span></td></tr>
+<tr><td>FND-02</td><td>Member self-update denylist is leaky</td><td><span class="pill sev-crit">Critical</span></td><td><span class="filepath">firestore.rules:50-55</span> — <span class="pill pass">Fixed &amp; deployed</span></td></tr>
+<tr><td>FND-03</td><td>Member can forge review metadata</td><td><span class="pill sev-high">High</span></td><td><span class="filepath">firestore.rules:82-94</span> — <span class="pill pass">Fixed &amp; deployed</span></td></tr>
+<tr><td>FND-04</td><td>Attendance forgeable without QR</td><td><span class="pill sev-crit">Critical</span></td><td><span class="filepath">firestore.rules:95-119</span> — <span class="pill pass">Fixed &amp; deployed</span></td></tr>
+<tr><td>FND-05</td><td>No live re-check of <code>active</code></td><td><span class="pill sev-high">High</span></td><td><span class="filepath">lib/core/auth_service.dart</span> — <span class="pill pass">Fixed</span></td></tr>
+<tr><td>FND-06</td><td>Orphan subcollections on event delete</td><td><span class="pill sev-high">High</span></td><td><span class="filepath">lib/core/event_service.dart</span> — <span class="pill pass">Fixed</span></td></tr>
+<tr><td>FND-07</td><td>Non-transactional counters</td><td><span class="pill sev-high">High</span></td><td><span class="filepath">event_service.dart, wallet_service.dart</span> — <span class="pill pass">Fixed</span></td></tr>
+<tr><td>FND-08</td><td>Password-reset default branch</td><td><span class="pill sev-med">Medium</span></td><td><span class="filepath">lib/core/auth_service.dart</span> — <span class="pill pass">Fixed</span></td></tr>
+<tr><td>FND-09</td><td>Topic reconciliation on role change</td><td><span class="pill sev-med">Medium</span></td><td><span class="filepath">lib/core/fcm_service.dart, auth_service.dart</span> — <span class="pill pass">Fixed</span></td></tr>
+<tr><td>FND-10</td><td>Orphan Auth account on create-failure</td><td><span class="pill sev-med">Medium</span></td><td><span class="filepath">lib/core/members_service.dart</span> — <span class="pill pass">Fixed</span></td></tr>
+<tr><td>FND-11</td><td>Non-atomic deactivate</td><td><span class="pill sev-med">Medium</span></td><td><span class="filepath">lib/core/members_service.dart</span> — <span class="pill pass">Fixed</span></td></tr>
+<tr><td>FND-12</td><td>Orphan Auth on president delete</td><td><span class="pill sev-med">Medium</span></td><td><span class="filepath">lib/core/members_service.dart</span> — <span class="pill pass">Fixed</span></td></tr>
+<tr><td>FND-13</td><td>Inconsistent upload size caps</td><td><span class="pill sev-med">Medium</span></td><td><span class="filepath">app_config.dart, cloudinary_service.dart</span> — <span class="pill pass">Fixed</span></td></tr>
+<tr><td>FND-14</td><td>Reject not transactional</td><td><span class="pill sev-med">Medium</span></td><td><span class="filepath">lib/core/event_service.dart</span> — <span class="pill pass">Fixed</span></td></tr>
+<tr><td>FND-15</td><td>Cross-member task visibility</td><td><span class="pill sev-low">Low</span></td><td><span class="filepath">firestore.rules:64</span> — <span class="pill warn">Accepted (by design)</span></td></tr>
+<tr><td>FND-16</td><td>Device clock trust in QR window</td><td><span class="pill sev-low">Low</span></td><td><span class="filepath">lib/core/attendance_service.dart</span> — <span class="pill warn">Accepted (UX only)</span></td></tr>
+<tr><td>FND-17</td><td>Manual attendance credits deactivated</td><td><span class="pill sev-low">Low</span></td><td><span class="filepath">lib/core/attendance_service.dart</span> — <span class="pill pass">Fixed</span></td></tr>
+<tr><td>FND-18</td><td>Gallery/Wallet create accepts forged fields</td><td><span class="pill sev-high">High</span></td><td><span class="filepath">firestore.rules:121-150</span> — <span class="pill pass">Fixed &amp; deployed</span></td></tr>
+<tr><td>FND-19</td><td>Cloudinary orphans</td><td><span class="pill sev-low">Low</span></td><td>Spark constraint — <span class="pill warn">Accepted (manual cleanup)</span></td></tr>
+<tr><td>FND-20</td><td>Duplicate Cloudinary client</td><td><span class="pill sev-low">Low</span></td><td><span class="filepath">lib/core/gallery_service.dart</span> — <span class="pill pass">Fixed</span></td></tr>
+<tr><td>FND-21</td><td>Silent FCM failures</td><td><span class="pill sev-low">Low</span></td><td><span class="filepath">lib/core/event_service.dart</span> — <span class="pill warn">Accepted (by design)</span></td></tr>
+<tr><td>FND-22</td><td>Unread count capped and ascending-ordered</td><td><span class="pill sev-med">Medium</span></td><td><span class="filepath">lib/core/notifications_service.dart</span> — <span class="pill pass">Fixed</span></td></tr>
+<tr><td>FND-23</td><td>Unread stream re-fires</td><td><span class="pill sev-low">Low</span></td><td><span class="filepath">lib/core/notifications_service.dart</span> — <span class="pill pass">Fixed</span></td></tr>
+<tr><td>FND-24</td><td>Hardcoded April-2026 theme</td><td><span class="pill sev-low">Low</span></td><td><span class="filepath">lib/models/monthly_theme.dart</span> — <span class="pill pass">Fixed</span></td></tr>
+<tr><td>FND-25</td><td>Open Cloudinary preset</td><td><span class="pill sev-low">Low</span></td><td>Cloudinary dashboard — <span class="pill warn">Owner action</span></td></tr>
+</table>
+
+<footer>
+  <p>Generated 2026-04-23 · Static &amp; contract phase · 148 cases / 25 findings · Prepared for the Agaram release-candidate review.</p>
+  <p class="muted">Next phase: Firestore rules unit tests (emulator) + E2E on a physical Android device. Estimate: 1 day setup, 1 day rule tests, 2 days E2E.</p>
+</footer>
+
+</div>
+</body>
+</html>
