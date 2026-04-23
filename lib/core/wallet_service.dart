@@ -7,6 +7,8 @@ import 'event_service.dart';
 import '../models/wallet_doc.dart';
 
 class WalletService {
+  static final FirebaseFirestore _db = FirebaseFirestore.instance;
+
   static CollectionReference<Map<String, dynamic>> collection(String eventId) =>
       EventService.events.doc(eventId).collection('wallet');
 
@@ -33,30 +35,35 @@ class WalletService {
     final fileName = file.path.split(Platform.pathSeparator).last;
     final bytes = await file.length();
 
-    final ref = await collection(eventId).add({
-      'eventId': eventId,
-      'eventTitle': eventTitle,
-      'title': title,
-      'caption': caption,
-      'url': url,
-      'type': walletDocTypeToString(type),
-      'uploadedBy': uploadedBy,
-      'uploadedByName': uploadedByName,
-      'uploadedAt': FieldValue.serverTimestamp(),
-      'fileName': fileName,
-      'sizeBytes': bytes,
-    });
-    // Also bump a summary counter on the event for quick listing.
-    await EventService.events.doc(eventId).set(
-      {
-        'walletCounts': {
-          if (type == WalletDocType.pdf) 'pdfs': FieldValue.increment(1),
-          if (type == WalletDocType.image) 'images': FieldValue.increment(1),
+    // Transactional so the doc insert and the event-level counter bump
+    // cannot diverge on a crash / rules race.
+    final ref = collection(eventId).doc();
+    await _db.runTransaction((tx) async {
+      tx.set(ref, {
+        'eventId': eventId,
+        'eventTitle': eventTitle,
+        'title': title,
+        'caption': caption,
+        'url': url,
+        'type': walletDocTypeToString(type),
+        'uploadedBy': uploadedBy,
+        'uploadedByName': uploadedByName,
+        'uploadedAt': FieldValue.serverTimestamp(),
+        'fileName': fileName,
+        'sizeBytes': bytes,
+      });
+      tx.set(
+        EventService.events.doc(eventId),
+        {
+          'walletCounts': {
+            if (type == WalletDocType.pdf) 'pdfs': FieldValue.increment(1),
+            if (type == WalletDocType.image) 'images': FieldValue.increment(1),
+          },
+          'walletLastUploadAt': FieldValue.serverTimestamp(),
         },
-        'walletLastUploadAt': FieldValue.serverTimestamp(),
-      },
-      SetOptions(merge: true),
-    );
+        SetOptions(merge: true),
+      );
+    });
     final snap = await ref.get();
     return WalletDoc.fromFirestore(snap);
   }
@@ -65,16 +72,19 @@ class WalletService {
     required String eventId,
     required WalletDoc doc,
   }) async {
-    await collection(eventId).doc(doc.id).delete();
-    await EventService.events.doc(eventId).set(
-      {
-        'walletCounts': {
-          if (doc.type == WalletDocType.pdf) 'pdfs': FieldValue.increment(-1),
-          if (doc.type == WalletDocType.image)
-            'images': FieldValue.increment(-1),
+    await _db.runTransaction((tx) async {
+      tx.delete(collection(eventId).doc(doc.id));
+      tx.set(
+        EventService.events.doc(eventId),
+        {
+          'walletCounts': {
+            if (doc.type == WalletDocType.pdf) 'pdfs': FieldValue.increment(-1),
+            if (doc.type == WalletDocType.image)
+              'images': FieldValue.increment(-1),
+          },
         },
-      },
-      SetOptions(merge: true),
-    );
+        SetOptions(merge: true),
+      );
+    });
   }
 }
