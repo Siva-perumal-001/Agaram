@@ -6,7 +6,6 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 
 import '../../core/attendance_service.dart';
-import '../../core/event_service.dart';
 import '../../core/theme.dart';
 import '../../models/event.dart';
 

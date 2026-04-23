@@ -13,12 +13,23 @@ import '../../models/task.dart';
 import '../../widgets/task_card.dart';
 import '../tasks/task_detail_screen.dart';
 import '../tasks/task_review_screen.dart';
-import 'event_form_screen.dart';
 import 'add_task_screen.dart';
+import 'attendance_tab.dart';
+import 'event_form_screen.dart';
+import 'gallery_tab.dart';
 
-class EventDetailScreen extends StatelessWidget {
+enum _DetailTab { tasks, attendance, gallery }
+
+class EventDetailScreen extends StatefulWidget {
   final String eventId;
   const EventDetailScreen({super.key, required this.eventId});
+
+  @override
+  State<EventDetailScreen> createState() => _EventDetailScreenState();
+}
+
+class _EventDetailScreenState extends State<EventDetailScreen> {
+  _DetailTab _tab = _DetailTab.tasks;
 
   @override
   Widget build(BuildContext context) {
@@ -26,7 +37,7 @@ class EventDetailScreen extends StatelessWidget {
 
     return Scaffold(
       body: StreamBuilder<DocumentSnapshot<Map<String, dynamic>>>(
-        stream: EventService.events.doc(eventId).snapshots(),
+        stream: EventService.events.doc(widget.eventId).snapshots(),
         builder: (_, snap) {
           if (!snap.hasData || !snap.data!.exists) {
             return const Center(child: CircularProgressIndicator());
@@ -37,49 +48,33 @@ class EventDetailScreen extends StatelessWidget {
               _EventHero(event: event, isAdmin: isAdmin),
               SliverToBoxAdapter(
                 child: Padding(
-                  padding: const EdgeInsets.fromLTRB(20, 24, 20, 24),
+                  padding: const EdgeInsets.fromLTRB(20, 24, 20, 12),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       _EventInfoCard(event: event),
-                      const SizedBox(height: 24),
-                      _about(context, event),
-                      const SizedBox(height: 24),
-                      _TabsRow(),
+                      if (event.description.isNotEmpty) ...[
+                        const SizedBox(height: 24),
+                        _about(event),
+                      ],
+                      const SizedBox(height: 20),
+                      _tabsRow(),
                       const SizedBox(height: 16),
                     ],
                   ),
                 ),
               ),
-              _TasksSliver(eventId: eventId, eventTitle: event.title),
+              _tabContent(event),
               const SliverToBoxAdapter(child: SizedBox(height: 120)),
             ],
           );
         },
       ),
-      floatingActionButton: isAdmin
-          ? FloatingActionButton.extended(
-              backgroundColor: AgaramColors.secondary,
-              foregroundColor: Colors.white,
-              onPressed: () async {
-                final snap = await EventService.events.doc(eventId).get();
-                if (!snap.exists || !context.mounted) return;
-                final ev = AgaramEvent.fromFirestore(snap);
-                Navigator.of(context).push(
-                  MaterialPageRoute(
-                    builder: (_) => AddTaskScreen(event: ev),
-                  ),
-                );
-              },
-              icon: const Icon(Icons.add_rounded),
-              label: const Text('Add Task'),
-            )
-          : null,
+      floatingActionButton: _fab(isAdmin),
     );
   }
 
-  Widget _about(BuildContext context, AgaramEvent event) {
-    if (event.description.isEmpty) return const SizedBox.shrink();
+  Widget _about(AgaramEvent event) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -101,6 +96,82 @@ class EventDetailScreen extends StatelessWidget {
           ),
         ),
       ],
+    );
+  }
+
+  Widget _tabsRow() {
+    return Row(
+      children: [
+        _pill('Tasks', _DetailTab.tasks),
+        const SizedBox(width: 8),
+        _pill('Attendance', _DetailTab.attendance),
+        const SizedBox(width: 8),
+        _pill('Gallery', _DetailTab.gallery),
+      ],
+    );
+  }
+
+  Widget _pill(String label, _DetailTab target) {
+    final selected = _tab == target;
+    return GestureDetector(
+      onTap: () => setState(() => _tab = target),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 160),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+        decoration: BoxDecoration(
+          color: selected
+              ? AgaramColors.primaryContainer
+              : AgaramColors.surfaceContainerLow,
+          borderRadius: BorderRadius.circular(999),
+        ),
+        child: Text(
+          label,
+          style: GoogleFonts.inter(
+            fontSize: 13,
+            fontWeight: FontWeight.w600,
+            color: selected ? Colors.white : AgaramColors.onSurfaceVariant,
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _tabContent(AgaramEvent event) {
+    switch (_tab) {
+      case _DetailTab.tasks:
+        return _TasksSliver(eventId: widget.eventId, eventTitle: event.title);
+      case _DetailTab.attendance:
+        return SliverToBoxAdapter(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(20, 4, 20, 0),
+            child: AttendanceTab(event: event),
+          ),
+        );
+      case _DetailTab.gallery:
+        return SliverToBoxAdapter(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(20, 4, 20, 0),
+            child: GalleryTab(eventId: widget.eventId),
+          ),
+        );
+    }
+  }
+
+  Widget? _fab(bool isAdmin) {
+    if (_tab != _DetailTab.tasks || !isAdmin) return null;
+    return FloatingActionButton.extended(
+      backgroundColor: AgaramColors.secondary,
+      foregroundColor: Colors.white,
+      onPressed: () async {
+        final snap = await EventService.events.doc(widget.eventId).get();
+        if (!snap.exists || !mounted) return;
+        final ev = AgaramEvent.fromFirestore(snap);
+        Navigator.of(context).push(
+          MaterialPageRoute(builder: (_) => AddTaskScreen(event: ev)),
+        );
+      },
+      icon: const Icon(Icons.add_rounded),
+      label: const Text('Add Task'),
     );
   }
 }
@@ -299,41 +370,6 @@ class _EventInfoCard extends StatelessWidget {
   }
 }
 
-class _TabsRow extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      children: [
-        _pill('Tasks', selected: true),
-        const SizedBox(width: 8),
-        _pill('Attendance', selected: false),
-        const SizedBox(width: 8),
-        _pill('Gallery', selected: false),
-      ],
-    );
-  }
-
-  Widget _pill(String label, {required bool selected}) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-      decoration: BoxDecoration(
-        color: selected
-            ? AgaramColors.primaryContainer
-            : AgaramColors.surfaceContainerLow,
-        borderRadius: BorderRadius.circular(999),
-      ),
-      child: Text(
-        label,
-        style: GoogleFonts.inter(
-          fontSize: 13,
-          fontWeight: FontWeight.w600,
-          color: selected ? Colors.white : AgaramColors.onSurfaceVariant,
-        ),
-      ),
-    );
-  }
-}
-
 class _TasksSliver extends StatelessWidget {
   final String eventId;
   final String eventTitle;
@@ -365,7 +401,7 @@ class _TasksSliver extends StatelessWidget {
         if (docs.isEmpty) {
           return SliverToBoxAdapter(
             child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 4),
               child: _EmptyTasks(isAdmin: isAdmin),
             ),
           );
