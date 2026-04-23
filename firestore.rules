@@ -3,46 +3,123 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
+    // --- Helpers --------------------------------------------------------
+
     function isSignedIn() {
       return request.auth != null;
     }
 
-    // Users: any signed-in member can read the roster; any signed-in user can
-    // write (the app restricts who calls which write). Rules get tightened in
-    // Phase 6 to enforce admin-only role/stars mutations.
-    match /users/{uid} {
-      allow read, write: if isSignedIn();
+    function userDoc(uid) {
+      return get(/databases/$(database)/documents/users/$(uid));
     }
 
-    // Events and their subcollections.
+    function isAdmin() {
+      return isSignedIn()
+        && exists(/databases/$(database)/documents/users/$(request.auth.uid))
+        && userDoc(request.auth.uid).data.role == 'admin';
+    }
+
+    function isPresident() {
+      return isAdmin()
+        && userDoc(request.auth.uid).data.isPresident == true;
+    }
+
+    function onlyChanged(allowedFields) {
+      return request.resource.data.diff(resource.data)
+        .affectedKeys().hasOnly(allowedFields);
+    }
+
+    function notChanged(forbiddenFields) {
+      return !request.resource.data.diff(resource.data)
+        .affectedKeys().hasAny(forbiddenFields);
+    }
+
+    // --- Users ----------------------------------------------------------
+
+    match /users/{uid} {
+      allow read: if isSignedIn();
+
+      // Only admins create user profiles (via the secondary-app flow).
+      allow create: if isAdmin();
+
+      // Self can update own non-role fields (including stars, which grows via
+      // attendance/task approval transactions on the user's own client).
+      // Admins can update any user's role or other fields, but only the
+      // president can flip the isPresident flag.
+      allow update: if isSignedIn() && (
+        (request.auth.uid == uid
+          && notChanged(['role', 'isPresident']))
+        || (isAdmin() && notChanged(['isPresident']))
+        || isPresident()
+      );
+
+      // Only the president can delete accounts.
+      allow delete: if isPresident();
+    }
+
+    // --- Events and subcollections --------------------------------------
+
     match /events/{eventId} {
-      allow read, write: if isSignedIn();
+      allow read: if isSignedIn();
+      allow create, update, delete: if isAdmin();
 
       match /tasks/{taskId} {
-        allow read, write: if isSignedIn();
+        allow read: if isSignedIn();
+
+        // Admin can create/update/delete freely.
+        allow create, delete: if isAdmin();
+
+        // Admin can update anything. Members can only submit proof for their
+        // own pending/rejected task — transitioning status to 'submitted'.
+        allow update: if isAdmin() || (
+          resource.data.assignedTo == request.auth.uid
+          && resource.data.status in ['pending', 'rejected']
+          && request.resource.data.status == 'submitted'
+          && onlyChanged([
+              'proofUrl', 'proofType', 'memberNote',
+              'status', 'submittedAt',
+              'reviewNote', 'reviewedBy', 'reviewedAt'
+          ])
+        );
       }
 
       match /attendance/{memberUid} {
-        allow read, write: if isSignedIn();
+        allow read: if isSignedIn();
+
+        // Member can create own attendance; admin can create any.
+        allow create: if isSignedIn()
+          && (memberUid == request.auth.uid || isAdmin());
+
+        // Only admin can modify or delete attendance entries.
+        allow update, delete: if isAdmin();
       }
 
       match /gallery/{photoId} {
-        allow read, write: if isSignedIn();
+        allow read: if isSignedIn();
+        allow create: if isSignedIn();
+
+        // Uploader or any admin can update/delete their photo.
+        allow update, delete: if isSignedIn() && (
+          resource.data.uploadedBy == request.auth.uid || isAdmin()
+        );
       }
     }
 
-    // Daily Kural overrides + monthly themes (admin-maintained content).
+    // --- Admin-managed content -----------------------------------------
+
     match /kurals/{date} {
-      allow read, write: if isSignedIn();
+      allow read: if isSignedIn();
+      allow write: if isAdmin();
     }
 
     match /themes/{yearMonth} {
-      allow read, write: if isSignedIn();
+      allow read: if isSignedIn();
+      allow write: if isAdmin();
     }
 
-    // Notifications (built in Phase 5).
     match /notifications/{notifId} {
-      allow read, write: if isSignedIn();
+      allow read: if isSignedIn();
+      allow create, update, delete: if isAdmin();
     }
   }
 }
