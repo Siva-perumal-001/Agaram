@@ -65,6 +65,32 @@ class EventService {
     await _fireAndForget(() => ReminderService.syncUpcoming());
   }
 
+  /// Deletes an event and every subcollection (tasks, attendance, gallery,
+  /// wallet) so collection-group queries (My Tasks, Review Queue) don't
+  /// surface orphaned children. Spark has no recursive-delete; we batch
+  /// client-side in chunks of 400 to stay under the 500-op batch limit.
+  ///
+  /// Admins should always route delete through here — never call
+  /// `events.doc(id).delete()` directly or use the Firebase Console.
+  static Future<void> deleteEvent(String eventId) async {
+    const subcollections = ['tasks', 'attendance', 'gallery', 'wallet'];
+    for (final name in subcollections) {
+      final col = events.doc(eventId).collection(name);
+      while (true) {
+        final snap = await col.limit(400).get();
+        if (snap.docs.isEmpty) break;
+        final batch = _db.batch();
+        for (final d in snap.docs) {
+          batch.delete(d.reference);
+        }
+        await batch.commit();
+        if (snap.docs.length < 400) break;
+      }
+    }
+    await events.doc(eventId).delete();
+    await _fireAndForget(() => ReminderService.syncUpcoming());
+  }
+
   static Future<DocumentReference<Map<String, dynamic>>> addTask({
     required String eventId,
     required String eventTitle,
@@ -74,20 +100,26 @@ class EventService {
     required String assignedToName,
     DateTime? dueDate,
   }) async {
-    final ref = await tasks(eventId).add({
-      'eventId': eventId,
-      'eventTitle': eventTitle,
-      'title': title,
-      'description': description,
-      'assignedTo': assignedTo,
-      'assignedToName': assignedToName,
-      'dueDate': dueDate == null ? null : Timestamp.fromDate(dueDate),
-      'status': taskStatusToString(TaskStatus.pending),
-      'starsAwarded': 0,
-      'createdAt': FieldValue.serverTimestamp(),
-    });
-    await events.doc(eventId).update({
-      'tasksCount': FieldValue.increment(1),
+    // Pre-generate the task doc ID so we can atomically set the task and
+    // bump the event's tasksCount inside a single transaction — a crash
+    // between the two writes used to leave the counter stale forever.
+    final ref = tasks(eventId).doc();
+    await _db.runTransaction((tx) async {
+      tx.set(ref, {
+        'eventId': eventId,
+        'eventTitle': eventTitle,
+        'title': title,
+        'description': description,
+        'assignedTo': assignedTo,
+        'assignedToName': assignedToName,
+        'dueDate': dueDate == null ? null : Timestamp.fromDate(dueDate),
+        'status': taskStatusToString(TaskStatus.pending),
+        'starsAwarded': 0,
+        'createdAt': FieldValue.serverTimestamp(),
+      });
+      tx.update(events.doc(eventId), {
+        'tasksCount': FieldValue.increment(1),
+      });
     });
 
     final sender = _senderContext();
@@ -121,15 +153,18 @@ class EventService {
     required ProofType proofType,
     String? memberNote,
   }) {
+    // Review metadata (reviewNote / reviewedBy / reviewedAt) is admin-only
+    // per firestore.rules and intentionally left in place here. On a
+    // resubmit-after-rejection the previous reviewNote stays until the
+    // admin writes a new review — review UI should show it as "previous
+    // feedback" and the admin overwrites when they approve/reject the
+    // fresh submission.
     return tasks(eventId).doc(taskId).update({
       'proofUrl': proofUrl,
       'proofType': proofType == ProofType.image ? 'image' : 'pdf',
       'memberNote': memberNote,
       'status': taskStatusToString(TaskStatus.submitted),
       'submittedAt': FieldValue.serverTimestamp(),
-      'reviewNote': null,
-      'reviewedBy': null,
-      'reviewedAt': null,
     });
   }
 
@@ -197,33 +232,43 @@ class EventService {
     required String reviewerUid,
     required String reviewNote,
   }) async {
-    await tasks(eventId).doc(taskId).update({
-      'status': taskStatusToString(TaskStatus.rejected),
-      'reviewedBy': reviewerUid,
-      'reviewedAt': FieldValue.serverTimestamp(),
-      'reviewNote': reviewNote,
-      'starsAwarded': 0,
+    // Capture assignee + title inside the transaction so the push body
+    // always matches the doc we just wrote — a plain update followed by a
+    // re-read has a small race window where a concurrent admin edit could
+    // change the values between the write and the read.
+    String? memberUid;
+    String taskTitle = 'your task';
+    await _db.runTransaction((tx) async {
+      final taskRef = tasks(eventId).doc(taskId);
+      final snap = await tx.get(taskRef);
+      if (!snap.exists) throw Exception('Task not found');
+      final data = snap.data() ?? {};
+      memberUid = data['assignedTo'] as String?;
+      taskTitle = data['title'] as String? ?? 'your task';
+      tx.update(taskRef, {
+        'status': taskStatusToString(TaskStatus.rejected),
+        'reviewedBy': reviewerUid,
+        'reviewedAt': FieldValue.serverTimestamp(),
+        'reviewNote': reviewNote,
+        'starsAwarded': 0,
+      });
     });
-
-    final taskSnap = await tasks(eventId).doc(taskId).get();
-    final taskData = taskSnap.data() ?? {};
-    final memberUid = taskData['assignedTo'] as String?;
-    final taskTitle = taskData['title'] as String? ?? 'your task';
-    if (memberUid == null) return;
+    final assignee = memberUid;
+    if (assignee == null) return;
 
     final sender = _senderContext();
     await _fireAndForget(() => NotificationsService.save(
           title: 'Needs resubmission',
           body: '"$taskTitle": $reviewNote',
           kind: AppNotificationKind.task,
-          topic: FcmService.userTopic(memberUid),
+          topic: FcmService.userTopic(assignee),
           sentBy: sender.uid,
           sentByName: sender.name,
           eventId: eventId,
           taskId: taskId,
         ));
     await _fireAndForget(() => FcmService.sendToUser(
-          uid: memberUid,
+          uid: assignee,
           title: 'Needs resubmission',
           body: '"$taskTitle": $reviewNote',
           data: {
