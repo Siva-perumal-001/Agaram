@@ -1,19 +1,24 @@
+import 'dart:convert';
 import 'dart:math';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:flutter/services.dart' show rootBundle;
+import 'package:googleapis_auth/auth_io.dart';
+import 'package:http/http.dart' as http;
 
+import 'app_config.dart';
 import 'app_secrets.dart';
 
 class MemberCreationResult {
   final String uid;
   final String email;
-  final String generatedPassword;
+  final String password;
   const MemberCreationResult({
     required this.uid,
     required this.email,
-    required this.generatedPassword,
+    required this.password,
   });
 }
 
@@ -23,7 +28,7 @@ class MembersService {
   static CollectionReference<Map<String, dynamic>> get _users =>
       _db.collection('users');
 
-  static String _generatePassword({int length = 10}) {
+  static String suggestPassword({int length = 10}) {
     const alphabet =
         'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789';
     final rand = Random.secure();
@@ -32,14 +37,16 @@ class MembersService {
   }
 
   /// Creates a new Firebase Auth user + Firestore profile without signing the
-  /// current admin out. Uses a temporary secondary [FirebaseApp] instance.
+  /// current admin out. Uses a temporary secondary [FirebaseApp] instance so
+  /// the primary session is untouched.
   static Future<MemberCreationResult> createMember({
     required String name,
     required String email,
+    required String password,
     String? phone,
     required String role,
+    String? position,
   }) async {
-    final password = _generatePassword();
     final secondaryName =
         'agaram-secondary-${DateTime.now().millisecondsSinceEpoch}';
 
@@ -67,7 +74,9 @@ class MembersService {
         'email': email.trim(),
         'phone': phone?.trim(),
         'role': role,
-        'isPresident': false,
+        'isPresident': position == 'president',
+        'position': position,
+        'active': true,
         'stars': 0,
         'joinedAt': FieldValue.serverTimestamp(),
       });
@@ -76,7 +85,7 @@ class MembersService {
       return MemberCreationResult(
         uid: uid,
         email: email.trim(),
-        generatedPassword: password,
+        password: password,
       );
     } finally {
       await secondary.delete();
@@ -85,5 +94,58 @@ class MembersService {
 
   static Future<void> setRole(String uid, {required String role}) {
     return _users.doc(uid).update({'role': role});
+  }
+
+  static Future<void> setPosition(String uid, {String? position}) {
+    return _users.doc(uid).update({
+      'position': position,
+      'isPresident': position == 'president',
+    });
+  }
+
+  /// Mark the member deactivated + disable their Firebase Auth account so new
+  /// sign-in attempts fail with `user-disabled`. Reversible via [reactivate].
+  static Future<void> deactivate(String uid) async {
+    await _users.doc(uid).update({'active': false});
+    await _setAuthAccountDisabled(uid, disabled: true);
+  }
+
+  static Future<void> reactivate(String uid) async {
+    await _users.doc(uid).update({'active': true});
+    await _setAuthAccountDisabled(uid, disabled: false);
+  }
+
+  static Future<void> _setAuthAccountDisabled(
+    String uid, {
+    required bool disabled,
+  }) async {
+    final raw =
+        await rootBundle.loadString(AppConfig.fcmServiceAccountAsset);
+    final decoded = jsonDecode(raw);
+    if (decoded is Map && decoded['_placeholder'] == true) {
+      // Without real credentials we can still flag `active` in Firestore;
+      // sign-in is blocked by AuthService._loadUser regardless.
+      return;
+    }
+    final creds = ServiceAccountCredentials.fromJson(decoded);
+    final client = await clientViaServiceAccount(creds, const [
+      'https://www.googleapis.com/auth/identitytoolkit',
+    ]);
+    try {
+      final url =
+          'https://identitytoolkit.googleapis.com/v1/projects/${AppSecrets.firebaseProjectId}/accounts:update';
+      final response = await client.post(
+        Uri.parse(url),
+        headers: const {'Content-Type': 'application/json'},
+        body: jsonEncode({'localId': uid, 'disableUser': disabled}),
+      );
+      if (response.statusCode != 200) {
+        throw Exception('Identity Toolkit update failed: ${response.body}');
+      }
+    } on http.ClientException catch (e) {
+      throw Exception('Network error toggling account state: $e');
+    } finally {
+      client.close();
+    }
   }
 }

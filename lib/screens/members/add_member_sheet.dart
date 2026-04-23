@@ -33,9 +33,12 @@ class _AddMemberSheetState extends State<AddMemberSheet> {
     if (!_formKey.currentState!.validate()) return;
     setState(() => _saving = true);
     try {
+      // Temporary: uses auto-generated password. Full redesign (admin-set
+       // password + position dropdown) is wired in the next Phase 7 commit.
       final result = await MembersService.createMember(
         name: _name.text.trim(),
         email: _email.text.trim(),
+        password: MembersService.suggestPassword(),
         phone: _phone.text.trim().isEmpty ? null : _phone.text.trim(),
         role: _role,
       );
@@ -204,7 +207,7 @@ class _AddMemberSheetState extends State<AddMemberSheet> {
             children: [
               Expanded(
                 child: SelectableText(
-                  r.generatedPassword,
+                  r.password,
                   style: GoogleFonts.jetBrainsMono(
                     fontSize: 17,
                     fontWeight: FontWeight.w600,
@@ -216,7 +219,7 @@ class _AddMemberSheetState extends State<AddMemberSheet> {
               IconButton(
                 icon: const Icon(Icons.copy_rounded),
                 onPressed: () {
-                  Clipboard.setData(ClipboardData(text: r.generatedPassword));
+                  Clipboard.setData(ClipboardData(text: r.password));
                   ScaffoldMessenger.of(context).showSnackBar(
                     const SnackBar(content: Text('Password copied')),
                   );
@@ -228,7 +231,7 @@ class _AddMemberSheetState extends State<AddMemberSheet> {
         const SizedBox(height: 20),
         ElevatedButton.icon(
           onPressed: () {
-            Clipboard.setData(ClipboardData(text: r.generatedPassword));
+            Clipboard.setData(ClipboardData(text: r.password));
             Navigator.of(context).pop();
           },
           icon: const Icon(Icons.check_rounded),
