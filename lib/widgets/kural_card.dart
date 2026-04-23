@@ -23,17 +23,22 @@ class KuralCard extends StatelessWidget {
           ),
         ],
       ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Container(
-            width: 4,
-            margin: const EdgeInsets.symmetric(vertical: 20),
-            decoration: BoxDecoration(
-              color: AgaramColors.secondaryContainer,
-              borderRadius: BorderRadius.circular(4),
+      // IntrinsicHeight forces Row to bound its height by the tallest child,
+      // which lets the vertical accent bar stretch properly without hitting
+      // an infinite-height assertion when the card is rendered inside an
+      // unbounded scroll view (caught by Layer-3 integration tests).
+      child: IntrinsicHeight(
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Container(
+              width: 4,
+              margin: const EdgeInsets.symmetric(vertical: 20),
+              decoration: BoxDecoration(
+                color: AgaramColors.secondaryContainer,
+                borderRadius: BorderRadius.circular(4),
+              ),
             ),
-          ),
           Expanded(
             child: Padding(
               padding: const EdgeInsets.all(20),
@@ -127,7 +132,8 @@ class KuralCard extends StatelessWidget {
               ),
             ),
           ),
-        ],
+          ],
+        ),
       ),
     );
   }
