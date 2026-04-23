@@ -16,9 +16,28 @@ Before you can run the app, you need to finish **Firebase setup** (takes ~10 min
 7. Click **Register app**.
 8. **Download `google-services.json`** and place it at:
    ```
-   /Users/apple/Desktop/Tamil_Club/android/app/google-services.json
+   android/app/google-services.json
    ```
+   This file is gitignored — every developer downloads their own.
 9. Skip the rest of the Firebase setup wizard — the gradle changes are already done.
+
+## 1b. Local secret files
+
+The repo ships templates for two files that live outside version control. You
+need to create both before the app will compile:
+
+1. **`lib/core/app_secrets.dart`** — copy `lib/core/app_secrets.template.dart`
+   to `lib/core/app_secrets.dart` and paste in the values from **Firebase
+   Console → Project settings → General → Your apps → Android app** (API key,
+   App ID, Messaging sender ID, Project ID, Storage bucket).
+
+2. **`assets/fcm-service-account.json`** — for admin push sending. Generate
+   at **Firebase Console → Project settings → Service accounts → Generate
+   new private key**, then save the downloaded JSON at
+   `assets/fcm-service-account.json`. If you skip this, the app still runs,
+   but the admin "Compose notification" send will fail.
+
+Both files are in `.gitignore`; do not commit them.
 
 ## 2. Enable Authentication
 
