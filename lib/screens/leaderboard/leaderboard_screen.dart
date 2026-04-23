@@ -28,8 +28,9 @@ class LeaderboardScreen extends StatelessWidget {
           stream: stream,
           builder: (_, snap) {
             if (snap.hasError) {
-              return const StreamErrorView(
+              return StreamErrorView(
                 message: "Couldn't load the leaderboard.",
+                error: snap.error,
               );
             }
             if (snap.connectionState == ConnectionState.waiting) {

@@ -60,8 +60,9 @@ class _MembersListScreenState extends State<MembersListScreen> {
                 stream: stream,
                 builder: (_, snap) {
                   if (snap.hasError) {
-                    return const StreamErrorView(
+                    return StreamErrorView(
                       message: "Couldn't load members.",
+                      error: snap.error,
                     );
                   }
                   if (snap.connectionState == ConnectionState.waiting) {

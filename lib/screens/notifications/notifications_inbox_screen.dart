@@ -114,8 +114,9 @@ class _NotificationsInboxScreenState extends State<NotificationsInboxScreen> {
       stream: NotificationsService.stream(),
       builder: (_, snap) {
         if (snap.hasError) {
-          return const StreamErrorView(
+          return StreamErrorView(
             message: "Couldn't load notifications.",
+            error: snap.error,
           );
         }
         if (snap.connectionState == ConnectionState.waiting) {

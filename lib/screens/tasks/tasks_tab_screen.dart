@@ -47,8 +47,9 @@ class _MyTasks extends StatelessWidget {
           stream: stream,
           builder: (_, snap) {
             if (snap.hasError) {
-              return const StreamErrorView(
+              return StreamErrorView(
                 message: "Couldn't load your tasks.",
+                error: snap.error,
               );
             }
             if (snap.connectionState == ConnectionState.waiting) {
@@ -122,8 +123,9 @@ class _AdminReviewQueue extends StatelessWidget {
           stream: pendingStream,
           builder: (_, pendingSnap) {
             if (pendingSnap.hasError) {
-              return const StreamErrorView(
+              return StreamErrorView(
                 message: "Couldn't load the review queue.",
+                error: pendingSnap.error,
               );
             }
             final pending =

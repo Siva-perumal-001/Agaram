@@ -6,17 +6,39 @@ import '../core/theme.dart';
 /// Inline error panel for `StreamBuilder` / `FutureBuilder` screens when the
 /// Firestore query fails (offline, rules denial, bad index). Optional
 /// [onRetry] callback rebuilds the stream via `setState` in the caller.
+/// Pass [error] to surface the underlying error message (helpful for
+/// distinguishing rules denials / missing indexes from network failures).
 class StreamErrorView extends StatelessWidget {
   final String message;
+  final Object? error;
   final VoidCallback? onRetry;
   final EdgeInsetsGeometry padding;
 
   const StreamErrorView({
     super.key,
     this.message = "Couldn't load this right now.",
+    this.error,
     this.onRetry,
     this.padding = const EdgeInsets.all(24),
   });
+
+  String? get _detail {
+    if (error == null) return null;
+    final raw = error.toString();
+    final lower = raw.toLowerCase();
+    if (lower.contains('permission-denied') ||
+        lower.contains('permission_denied')) {
+      return 'Firestore rules are blocking this query. Deploy the latest rules: firebase deploy --only firestore:rules';
+    }
+    if (lower.contains('failed-precondition') ||
+        lower.contains('requires an index')) {
+      return 'Missing Firestore index. Open the link from the debug console to create it, or deploy firestore.indexes.json.';
+    }
+    if (lower.contains('unavailable') || lower.contains('network')) {
+      return 'Firestore is unreachable. Check the device connection.';
+    }
+    return raw.length > 160 ? '${raw.substring(0, 160)}…' : raw;
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -58,7 +80,7 @@ class StreamErrorView extends StatelessWidget {
             ),
             const SizedBox(height: 6),
             Text(
-              'Check your connection and try again.',
+              _detail ?? 'Check your connection and try again.',
               style: GoogleFonts.inter(
                 fontSize: 12,
                 color: AgaramColors.onSurfaceVariant,

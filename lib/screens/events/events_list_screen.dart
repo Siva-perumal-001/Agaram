@@ -175,6 +175,7 @@ class _EventsListScreenState extends State<EventsListScreen> {
         if (snap.hasError) {
           return StreamErrorView(
             message: "Couldn't load events.",
+            error: snap.error,
             onRetry: () => setState(() {}),
           );
         }
