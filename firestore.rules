@@ -57,6 +57,14 @@ service cloud.firestore {
       allow delete: if isPresident();
     }
 
+    // --- Collection-group reads ----------------------------------------
+    // Required for `collectionGroup('tasks')` queries (Review Queue,
+    // My Tasks, admin stats). Writes stay governed by the nested rule
+    // under /events/{eventId}/tasks/{taskId}.
+    match /{path=**}/tasks/{taskId} {
+      allow read: if isSignedIn();
+    }
+
     // --- Events and subcollections --------------------------------------
 
     match /events/{eventId} {
