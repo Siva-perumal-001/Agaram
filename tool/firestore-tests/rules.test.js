@@ -840,9 +840,9 @@ describe('notifications/{id}', () => {
 });
 
 // ════════════════════════════════════════════════════════════════════
-//                           KURALS / THEMES
+//                               KURALS
 // ════════════════════════════════════════════════════════════════════
-describe('kurals/{date} + themes/{yearMonth}', () => {
+describe('kurals/{date}', () => {
   it('signed-in reads kural → allow', async () => {
     await assertSucceeds(getDoc(doc(memberDb(), 'kurals', '2026-04-23')));
   });
@@ -856,18 +856,6 @@ describe('kurals/{date} + themes/{yearMonth}', () => {
   it('member writes kural → deny', async () => {
     await assertFails(
       setDoc(doc(memberDb(), 'kurals', '2026-04-23'), { number: 1 })
-    );
-  });
-  it('admin writes theme → allow', async () => {
-    await assertSucceeds(
-      setDoc(doc(adminDb(), 'themes', '2026-04'), {
-        tamilTitle: 't', englishTitle: 'e',
-      })
-    );
-  });
-  it('member writes theme → deny', async () => {
-    await assertFails(
-      setDoc(doc(memberDb(), 'themes', '2026-04'), { tamilTitle: 't' })
     );
   });
 });

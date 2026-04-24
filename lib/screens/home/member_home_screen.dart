@@ -7,14 +7,11 @@ import '../../core/auth_service.dart';
 import '../../core/kural_service.dart';
 import '../../core/notifications_service.dart';
 import '../../core/theme.dart';
-import '../../core/theme_service.dart';
 import '../../models/app_user.dart';
 import '../../models/kural.dart';
-import '../../models/monthly_theme.dart';
 import '../../widgets/agaram_logo.dart';
 import '../../widgets/event_preview_card.dart';
 import '../../widgets/kural_card.dart';
-import '../../widgets/monthly_theme_banner.dart';
 import '../../widgets/star_card.dart';
 import '../leaderboard/leaderboard_screen.dart';
 import '../notifications/notifications_inbox_screen.dart';
@@ -28,13 +25,11 @@ class MemberHomeScreen extends StatefulWidget {
 
 class _MemberHomeScreenState extends State<MemberHomeScreen> {
   late final Future<Kural> _kuralFuture;
-  late final Future<MonthlyTheme> _themeFuture;
 
   @override
   void initState() {
     super.initState();
     _kuralFuture = KuralService.todaysKural();
-    _themeFuture = MonthlyThemeService.currentTheme();
   }
 
   @override
@@ -60,14 +55,6 @@ class _MemberHomeScreenState extends State<MemberHomeScreen> {
                 builder: (_, snap) {
                   if (!snap.hasData) return const _SkeletonCard(height: 220);
                   return KuralCard(kural: snap.data!);
-                },
-              ),
-              const SizedBox(height: 18),
-              FutureBuilder<MonthlyTheme>(
-                future: _themeFuture,
-                builder: (_, snap) {
-                  final theme = snap.data ?? MonthlyTheme.neutralFallback();
-                  return MonthlyThemeBanner(theme: theme);
                 },
               ),
               const SizedBox(height: 24),

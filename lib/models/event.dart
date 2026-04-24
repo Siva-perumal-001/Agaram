@@ -23,13 +23,12 @@ class AgaramEvent {
   final String venue;
   final DateTime date;
   final String? bannerUrl;
-  final String? monthlyTheme;
   final String createdBy;
   final EventStatus status;
   final int tasksCount;
 
   /// `'event'` (default) or `'meeting'`. Meetings reuse the same attendance
-  /// and QR flow but the UI hides banner + monthly-theme fields.
+  /// and QR flow but the UI hides the banner field.
   final String kind;
 
   /// Expected duration in minutes — used to close the QR attendance window
@@ -46,7 +45,6 @@ class AgaramEvent {
     required this.status,
     required this.tasksCount,
     this.bannerUrl,
-    this.monthlyTheme,
     this.kind = 'event',
     this.durationMinutes = 120,
   });
@@ -77,7 +75,6 @@ class AgaramEvent {
       status: _parseStatus(data['status'] as String?),
       tasksCount: (data['tasksCount'] as num?)?.toInt() ?? 0,
       bannerUrl: data['bannerUrl'] as String?,
-      monthlyTheme: data['monthlyTheme'] as String?,
       kind: data['kind'] as String? ?? 'event',
       durationMinutes: (data['durationMinutes'] as num?)?.toInt() ?? 120,
     );
@@ -95,7 +92,6 @@ class AgaramEvent {
       'kind': kind,
       'durationMinutes': durationMinutes,
       if (bannerUrl != null) 'bannerUrl': bannerUrl,
-      if (monthlyTheme != null) 'monthlyTheme': monthlyTheme,
     };
   }
 }

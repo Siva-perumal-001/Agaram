@@ -10,7 +10,6 @@ import '../../core/auth_service.dart';
 import '../../core/cloudinary_service.dart';
 import '../../core/event_service.dart';
 import '../../core/theme.dart';
-import '../../core/theme_service.dart';
 import '../../models/event.dart';
 import '../../widgets/banner_upload_field.dart';
 
@@ -101,7 +100,6 @@ class _EventFormScreenState extends State<EventFormScreen> {
         _time.hour,
         _time.minute,
       );
-      final themeId = MonthlyThemeService.currentYearMonth(combined);
 
       if (_isEdit) {
         await EventService.updateEvent(widget.existing!.id, {
@@ -110,7 +108,6 @@ class _EventFormScreenState extends State<EventFormScreen> {
           'venue': _venueCtrl.text.trim(),
           'date': Timestamp.fromDate(combined),
           'bannerUrl': _isMeeting ? null : finalBannerUrl,
-          'monthlyTheme': _isMeeting ? null : themeId,
           'kind': _kind,
           'durationMinutes': _durationMinutes,
         });
@@ -124,7 +121,6 @@ class _EventFormScreenState extends State<EventFormScreen> {
           'status': 'upcoming',
           'tasksCount': 0,
           'bannerUrl': _isMeeting ? null : finalBannerUrl,
-          'monthlyTheme': _isMeeting ? null : themeId,
           'kind': _kind,
           'durationMinutes': _durationMinutes,
         });

@@ -13,12 +13,10 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:agaram/core/app_config.dart';
 import 'package:agaram/core/attendance_service.dart';
 import 'package:agaram/core/members_service.dart';
-import 'package:agaram/core/theme_service.dart';
 import 'package:agaram/models/app_notification.dart';
 import 'package:agaram/models/app_user.dart';
 import 'package:agaram/models/attendance.dart';
 import 'package:agaram/models/event.dart';
-import 'package:agaram/models/monthly_theme.dart';
 import 'package:agaram/models/task.dart';
 
 Future<DocumentSnapshot<Map<String, dynamic>>> _seed(
@@ -214,58 +212,6 @@ void main() {
         isTrue,
       );
       expect(n.kind, AppNotificationKind.task);
-    });
-  });
-
-  // ════════════════════════════════════════════════════════════════════
-  //                      MODEL · MonthlyTheme
-  // ════════════════════════════════════════════════════════════════════
-  group('MonthlyTheme', () {
-    test('fromFirestore prefers englishTitle but falls back to legacy `title`', () async {
-      final db = FakeFirebaseFirestore();
-      await db.doc('themes/2026-04').set({
-        'tamilTitle': 'இயற்கை',
-        'englishTitle': 'Nature',
-      });
-      await db.doc('themes/2025-09').set({
-        'tamilTitle': 'வாழ்வு',
-        'title': 'Legacy title field', // older docs
-      });
-      final fresh = MonthlyTheme.fromFirestore(await db.doc('themes/2026-04').get());
-      final legacy = MonthlyTheme.fromFirestore(await db.doc('themes/2025-09').get());
-      expect(fresh.englishTitle, 'Nature');
-      expect(legacy.englishTitle, 'Legacy title field');
-    });
-
-    test('neutralFallback derives yearMonth from DateTime.now()', () {
-      final t = MonthlyTheme.neutralFallback(DateTime.utc(2026, 7, 3));
-      expect(t.yearMonth, '2026-07');
-      expect(t.englishTitle, isNotEmpty);
-      expect(t.tamilTitle, isNotEmpty);
-    });
-
-    test('neutralFallback pads month to 2 digits', () {
-      final t = MonthlyTheme.neutralFallback(DateTime.utc(2026, 1, 1));
-      expect(t.yearMonth, '2026-01');
-    });
-
-    test('neutralFallback pads year to 4 digits (defensive)', () {
-      final t = MonthlyTheme.neutralFallback(DateTime.utc(99, 1, 1));
-      expect(t.yearMonth, '0099-01');
-    });
-  });
-
-  // ════════════════════════════════════════════════════════════════════
-  //                 SERVICE · MonthlyThemeService.currentYearMonth
-  // ════════════════════════════════════════════════════════════════════
-  group('MonthlyThemeService.currentYearMonth', () {
-    test('formats YYYY-MM zero-padded', () {
-      expect(MonthlyThemeService.currentYearMonth(DateTime.utc(2026, 3, 7)),
-          '2026-03');
-      expect(MonthlyThemeService.currentYearMonth(DateTime.utc(2026, 12, 1)),
-          '2026-12');
-      expect(MonthlyThemeService.currentYearMonth(DateTime.utc(2001, 1, 1)),
-          '2001-01');
     });
   });
 

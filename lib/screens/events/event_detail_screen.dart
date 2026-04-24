@@ -286,24 +286,6 @@ class _EventInfoCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          if (event.monthlyTheme != null && event.monthlyTheme!.isNotEmpty) ...[
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-              decoration: BoxDecoration(
-                color: AgaramColors.secondaryContainer,
-                borderRadius: BorderRadius.circular(999),
-              ),
-              child: Text(
-                '${_monthLabel(event.monthlyTheme!)} theme',
-                style: GoogleFonts.inter(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w600,
-                  color: AgaramColors.secondary,
-                ),
-              ),
-            ),
-            const SizedBox(height: 16),
-          ],
           _row(
             icon: Icons.calendar_today_rounded,
             label: DateFormat('MMMM d, yyyy').format(event.date),
@@ -352,17 +334,6 @@ class _EventInfoCard extends StatelessWidget {
         ),
       ],
     );
-  }
-
-  String _monthLabel(String yearMonth) {
-    final parts = yearMonth.split('-');
-    if (parts.length != 2) return yearMonth;
-    final idx = int.tryParse(parts[1]) ?? 1;
-    const months = [
-      'January', 'February', 'March', 'April', 'May', 'June',
-      'July', 'August', 'September', 'October', 'November', 'December',
-    ];
-    return months[(idx - 1).clamp(0, 11)];
   }
 }
 
