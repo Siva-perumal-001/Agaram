@@ -96,7 +96,11 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
     try {
       final kind =
           _pickedKind == ProofType.image ? ProofKind.image : ProofKind.pdf;
-      final url = await CloudinaryService.uploadProof(_localFile!, kind: kind);
+      final url = await CloudinaryService.uploadProof(
+        _localFile!,
+        kind: kind,
+        eventId: widget.task.eventId,
+      );
       if (!mounted) return;
       setState(() => _uploadProgress = 0.85);
 

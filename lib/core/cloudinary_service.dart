@@ -30,10 +30,14 @@ class CloudinaryService {
     );
   }
 
-  static Future<String> uploadProof(File file, {required ProofKind kind}) {
+  static Future<String> uploadProof(
+    File file, {
+    required ProofKind kind,
+    required String eventId,
+  }) {
     return _upload(
       file,
-      folder: '${AppConfig.cloudinaryFolderRoot}/proofs',
+      folder: '${AppConfig.cloudinaryFolderRoot}/proofs/events/$eventId',
       resourceType: kind == ProofKind.image
           ? CloudinaryResourceType.Image
           : CloudinaryResourceType.Auto,
@@ -52,10 +56,14 @@ class CloudinaryService {
     );
   }
 
-  static Future<String> uploadWalletDoc(File file, {required bool isPdf}) {
+  static Future<String> uploadWalletDoc(
+    File file, {
+    required bool isPdf,
+    required String eventId,
+  }) {
     return _upload(
       file,
-      folder: '${AppConfig.cloudinaryFolderRoot}/wallet',
+      folder: '${AppConfig.cloudinaryFolderRoot}/wallet/events/$eventId',
       resourceType:
           isPdf ? CloudinaryResourceType.Auto : CloudinaryResourceType.Image,
       maxSizeMb: AppConfig.maxWalletFileSizeMb,
@@ -63,10 +71,13 @@ class CloudinaryService {
     );
   }
 
-  static Future<String> uploadGalleryPhoto(File file) {
+  static Future<String> uploadGalleryPhoto(
+    File file, {
+    required String eventId,
+  }) {
     return _upload(
       file,
-      folder: '${AppConfig.cloudinaryFolderRoot}/gallery',
+      folder: '${AppConfig.cloudinaryFolderRoot}/gallery/events/$eventId',
       resourceType: CloudinaryResourceType.Image,
       maxSizeMb: AppConfig.maxGalleryFileSizeMb,
       kindLabel: 'photo',

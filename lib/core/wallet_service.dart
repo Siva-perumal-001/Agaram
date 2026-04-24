@@ -37,6 +37,7 @@ class WalletService {
     final url = await CloudinaryService.uploadWalletDoc(
       file,
       isPdf: type == WalletDocType.pdf,
+      eventId: eventId,
     );
     final fileName = file.path.split(Platform.pathSeparator).last;
     final bytes = await file.length();

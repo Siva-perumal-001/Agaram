@@ -16,7 +16,7 @@ class GalleryService {
     required String uploadedByName,
     String? caption,
   }) async {
-    final url = await CloudinaryService.uploadGalleryPhoto(file);
+    final url = await CloudinaryService.uploadGalleryPhoto(file, eventId: eventId);
     await gallery(eventId).add({
       'url': url,
       'uploadedBy': uploadedBy,
