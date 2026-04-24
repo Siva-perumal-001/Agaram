@@ -173,35 +173,60 @@ class TaskCard extends StatelessWidget {
       );
     }
     // pending or rejected
+    final pastDueLocked = task.isPastDue && !task.hasActiveExtension;
     return Row(
       children: [
-        if (task.dueDate != null) ...[
-          const Icon(
+        if (task.effectiveDueDate != null) ...[
+          Icon(
             Icons.calendar_today_rounded,
             size: 14,
-            color: AgaramColors.onSurfaceVariant,
+            color: pastDueLocked
+                ? AgaramColors.error
+                : AgaramColors.onSurfaceVariant,
           ),
           const SizedBox(width: 6),
           Text(
-            'Due ${DateFormat('MMM d').format(task.dueDate!)}',
+            pastDueLocked
+                ? 'Past due'
+                : 'Due ${DateFormat('MMM d').format(task.effectiveDueDate!)}',
             style: GoogleFonts.inter(
               fontSize: 12,
-              color: AgaramColors.onSurfaceVariant,
+              fontWeight: pastDueLocked ? FontWeight.w700 : FontWeight.w400,
+              color: pastDueLocked
+                  ? AgaramColors.error
+                  : AgaramColors.onSurfaceVariant,
             ),
           ),
+          if (task.extensionGrantedDays != null && !pastDueLocked) ...[
+            const SizedBox(width: 6),
+            Text(
+              '(+${task.extensionGrantedDays}d)',
+              style: GoogleFonts.inter(
+                fontSize: 11,
+                fontWeight: FontWeight.w700,
+                color: AgaramColors.success,
+              ),
+            ),
+          ],
         ],
         const Spacer(),
         if (!adminView && _isMine && onUploadProof != null)
           TextButton(
             onPressed: onUploadProof,
             child: Text(
-              task.status == TaskStatus.rejected
-                  ? 'Upload again'
-                  : 'Upload proof',
+              pastDueLocked
+                  ? (task.hasPendingExtension
+                      ? 'Awaiting admin'
+                      : 'Request extension')
+                  : (task.status == TaskStatus.rejected
+                      ? 'Upload again'
+                      : 'Upload proof'),
               style: GoogleFonts.inter(
                 fontSize: 13,
                 fontWeight: FontWeight.w600,
-                color: AgaramColors.primary,
+                color: pastDueLocked
+                    ? AgaramColors.error
+                    : AgaramColors.primary,
               ),
             ),
           ),

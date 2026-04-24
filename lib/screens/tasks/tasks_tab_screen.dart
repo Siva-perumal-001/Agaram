@@ -111,6 +111,10 @@ class _AdminReviewQueue extends StatelessWidget {
         .collectionGroup('tasks')
         .where('status', whereIn: ['approved', 'rejected'])
         .snapshots();
+    final extensionStream = FirebaseFirestore.instance
+        .collectionGroup('tasks')
+        .where('extensionStatus', isEqualTo: 'pending')
+        .snapshots();
 
     return Scaffold(
       appBar: AppBar(
@@ -141,6 +145,50 @@ class _AdminReviewQueue extends StatelessWidget {
                   },
                 ),
                 const SizedBox(height: 20),
+                StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
+                  stream: extensionStream,
+                  builder: (_, extSnap) {
+                    final exts = (extSnap.data?.docs ?? [])
+                        .map(AgaramTask.fromFirestore)
+                        .toList();
+                    if (exts.isEmpty) return const SizedBox.shrink();
+                    return Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            const Icon(Icons.schedule_send_rounded,
+                                size: 18, color: AgaramColors.warning),
+                            const SizedBox(width: 8),
+                            Text(
+                              'Extension Requests (${exts.length})',
+                              style: GoogleFonts.inter(
+                                fontSize: 20,
+                                fontWeight: FontWeight.w700,
+                                color: AgaramColors.warning,
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 12),
+                        ...exts.map(
+                          (t) => Padding(
+                            padding: const EdgeInsets.only(bottom: 12),
+                            child: _ExtensionRequestCard(
+                              task: t,
+                              onOpen: () => Navigator.of(context).push(
+                                MaterialPageRoute(
+                                  builder: (_) => TaskReviewScreen(task: t),
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                      ],
+                    );
+                  },
+                ),
                 Row(
                   children: [
                     Expanded(
@@ -346,6 +394,89 @@ class _ReviewQueueCard extends StatelessWidget {
     if (diff.inDays < 1) return '${diff.inHours}h ago';
     if (diff.inDays < 7) return '${diff.inDays}d ago';
     return DateFormat('MMM d').format(dt);
+  }
+}
+
+class _ExtensionRequestCard extends StatelessWidget {
+  final AgaramTask task;
+  final VoidCallback onOpen;
+  const _ExtensionRequestCard({required this.task, required this.onOpen});
+
+  @override
+  Widget build(BuildContext context) {
+    final days = task.extensionRequestedDays ?? 1;
+    final reason = (task.extensionReason ?? '').trim();
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: AgaramColors.warningContainer,
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(
+          color: AgaramColors.warning.withValues(alpha: 0.3),
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: RichText(
+                  text: TextSpan(
+                    style: GoogleFonts.inter(
+                      fontSize: 14,
+                      color: AgaramColors.onSurface,
+                    ),
+                    children: [
+                      TextSpan(
+                        text: task.assignedToName.isEmpty
+                            ? 'Member'
+                            : task.assignedToName,
+                        style: const TextStyle(fontWeight: FontWeight.w700),
+                      ),
+                      TextSpan(text: ' wants +$days day${days == 1 ? '' : 's'} on '),
+                      TextSpan(
+                        text: '"${task.title}"',
+                        style: const TextStyle(
+                          fontStyle: FontStyle.italic,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
+          if (reason.isNotEmpty) ...[
+            const SizedBox(height: 8),
+            Text(
+              '"$reason"',
+              style: GoogleFonts.inter(
+                fontSize: 13,
+                fontStyle: FontStyle.italic,
+                color: AgaramColors.onSurface,
+                height: 1.4,
+              ),
+            ),
+          ],
+          const SizedBox(height: 10),
+          Text(
+            'Paid −${task.extensionStarCost} star(s) · ${task.eventTitle}',
+            style: GoogleFonts.inter(
+              fontSize: 12,
+              color: AgaramColors.onSurfaceVariant,
+            ),
+          ),
+          const SizedBox(height: 12),
+          FilledButton.icon(
+            onPressed: onOpen,
+            icon: const Icon(Icons.rate_review_outlined, size: 18),
+            label: const Text('Review'),
+          ),
+        ],
+      ),
+    );
   }
 }
 

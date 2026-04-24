@@ -23,6 +23,14 @@
         { "fieldPath": "status", "order": "ASCENDING" },
         { "fieldPath": "reviewedAt", "order": "ASCENDING" }
       ]
+    },
+    {
+      "collectionGroup": "tasks",
+      "queryScope": "COLLECTION_GROUP",
+      "fields": [
+        { "fieldPath": "extensionStatus", "order": "ASCENDING" },
+        { "fieldPath": "extensionRequestedAt", "order": "ASCENDING" }
+      ]
     }
   ],
   "fieldOverrides": [
@@ -43,6 +51,13 @@
     {
       "collectionGroup": "attendance",
       "fieldPath": "checkedInAt",
+      "indexes": [
+        { "queryScope": "COLLECTION_GROUP", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "tasks",
+      "fieldPath": "extensionStatus",
       "indexes": [
         { "queryScope": "COLLECTION_GROUP", "order": "ASCENDING" }
       ]

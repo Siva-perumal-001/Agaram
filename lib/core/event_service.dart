@@ -104,7 +104,7 @@ class EventService {
     required String description,
     required String assignedTo,
     required String assignedToName,
-    DateTime? dueDate,
+    required DateTime dueDate,
   }) async {
     // Pre-generate the task doc ID so we can atomically set the task and
     // bump the event's tasksCount inside a single transaction — a crash
@@ -118,7 +118,7 @@ class EventService {
         'description': description,
         'assignedTo': assignedTo,
         'assignedToName': assignedToName,
-        'dueDate': dueDate == null ? null : Timestamp.fromDate(dueDate),
+        'dueDate': Timestamp.fromDate(dueDate),
         'status': taskStatusToString(TaskStatus.pending),
         'starsAwarded': 0,
         'createdAt': FieldValue.serverTimestamp(),
@@ -318,6 +318,295 @@ class EventService {
             'eventId': eventId,
             'taskId': taskId,
           },
+        ));
+  }
+
+  // ────────────────────────────────────────────────────────────────────────
+  //                    Due-date extension request flow
+  // ────────────────────────────────────────────────────────────────────────
+  //
+  // Cost ladder: the Nth member-initiated request on a task costs N stars.
+  // `extensionCount` increments at REQUEST time (not review time) so the cost
+  // is locked into the doc before the admin sees it. Denied requests do not
+  // refund stars. Admin-proactive extensions never increment this counter.
+
+  /// Member-initiated extension request. Deducts stars + records the ask.
+  static Future<void> requestExtension({
+    required String eventId,
+    required String taskId,
+    required String memberUid,
+    required int requestedDays,
+    required String reason,
+  }) async {
+    if (requestedDays < 1 || requestedDays > 4) {
+      throw ArgumentError('requestedDays must be 1..4');
+    }
+    if (reason.trim().isEmpty) {
+      throw ArgumentError('reason is required');
+    }
+
+    String taskTitle = 'your task';
+    int cost = 0;
+    await _db.runTransaction((tx) async {
+      final taskRef = tasks(eventId).doc(taskId);
+      final userRef = _db.collection('users').doc(memberUid);
+      final taskSnap = await tx.get(taskRef);
+      if (!taskSnap.exists) throw Exception('Task not found');
+      final userSnap = await tx.get(userRef);
+
+      final data = taskSnap.data() ?? {};
+      if (data['assignedTo'] != memberUid) {
+        throw Exception('Only the assigned member can request an extension.');
+      }
+      final status = data['status'] as String? ?? 'pending';
+      if (status != 'pending' && status != 'rejected') {
+        throw Exception('This task is not open for extension.');
+      }
+      final extStatus = data['extensionStatus'] as String?;
+      if (extStatus == 'pending') {
+        throw Exception('You already have a pending request on this task.');
+      }
+      // If an earlier extension was approved and is still within its window,
+      // there's nothing to extend further (member still has time).
+      if (extStatus == 'approved') {
+        final until = (data['extensionGrantedUntil'] as Timestamp?)?.toDate();
+        if (until != null && DateTime.now().isBefore(until)) {
+          throw Exception('Current extension is still active.');
+        }
+      }
+
+      taskTitle = data['title'] as String? ?? taskTitle;
+      final count = (data['extensionCount'] as num?)?.toInt() ?? 0;
+      cost = count + 1;
+      final stars = (userSnap.data()?['stars'] as num?)?.toInt() ?? 0;
+      if (stars < cost) {
+        throw Exception('Not enough stars. Need $cost, you have $stars.');
+      }
+
+      tx.update(taskRef, {
+        'extensionStatus': extensionStatusToString(ExtensionStatus.pending),
+        'extensionRequestedAt': FieldValue.serverTimestamp(),
+        'extensionReason': reason.trim(),
+        'extensionRequestedDays': requestedDays,
+        'extensionAdminInitiated': false,
+        'extensionStarCost': cost,
+        'extensionCount': count + 1,
+        // Clear prior review fields so the admin UI doesn't show stale state.
+        'extensionGrantedUntil': null,
+        'extensionGrantedDays': null,
+        'extensionReviewedBy': null,
+        'extensionReviewedAt': null,
+        'extensionReviewNote': null,
+      });
+      tx.update(userRef, {'stars': stars - cost});
+    });
+
+    final sender = _senderContext();
+    await _fireAndForget(() => NotificationsService.save(
+          title: 'Extension requested: $taskTitle',
+          body: '${sender.name} asked for $requestedDays day(s) '
+              '(cost: -$cost stars). Tap to review.',
+          kind: AppNotificationKind.task,
+          topic: AppConfig.topicAdmins,
+          sentBy: sender.uid,
+          sentByName: sender.name,
+          eventId: eventId,
+          taskId: taskId,
+        ));
+    await _fireAndForget(() => FcmService.sendToTopic(
+          topic: AppConfig.topicAdmins,
+          title: 'Extension requested: $taskTitle',
+          body: '${sender.name} asked for $requestedDays day(s). Tap to review.',
+          data: {'kind': 'task', 'eventId': eventId, 'taskId': taskId},
+        ));
+  }
+
+  /// Admin approves a pending extension request.
+  /// New effective due = original `dueDate + grantedDays`. If status was
+  /// `rejected`, flip it back to `pending` so the member lands on the upload
+  /// form.
+  static Future<void> approveExtension({
+    required String eventId,
+    required String taskId,
+    required String reviewerUid,
+    required int grantedDays,
+    String? reviewNote,
+  }) async {
+    if (grantedDays < 1 || grantedDays > 4) {
+      throw ArgumentError('grantedDays must be 1..4');
+    }
+    String? memberUid;
+    String taskTitle = 'your task';
+    DateTime? newDue;
+    await _db.runTransaction((tx) async {
+      final taskRef = tasks(eventId).doc(taskId);
+      final snap = await tx.get(taskRef);
+      if (!snap.exists) throw Exception('Task not found');
+      final data = snap.data() ?? {};
+      if ((data['extensionStatus'] as String?) != 'pending') {
+        throw Exception('No pending extension on this task.');
+      }
+      memberUid = data['assignedTo'] as String?;
+      taskTitle = data['title'] as String? ?? taskTitle;
+      final baseDue = (data['dueDate'] as Timestamp?)?.toDate();
+      if (baseDue == null) {
+        throw Exception('Task has no due date to extend.');
+      }
+      newDue = baseDue.add(Duration(days: grantedDays));
+
+      final updates = <String, dynamic>{
+        'extensionStatus': extensionStatusToString(ExtensionStatus.approved),
+        'extensionGrantedDays': grantedDays,
+        'extensionGrantedUntil': Timestamp.fromDate(newDue!),
+        'extensionReviewedBy': reviewerUid,
+        'extensionReviewedAt': FieldValue.serverTimestamp(),
+        'extensionReviewNote': reviewNote,
+      };
+      // Reopen a rejected task so the member can upload again.
+      if ((data['status'] as String?) == 'rejected') {
+        updates['status'] = taskStatusToString(TaskStatus.pending);
+      }
+      tx.update(taskRef, updates);
+    });
+
+    final assignee = memberUid;
+    if (assignee == null || newDue == null) return;
+    final sender = _senderContext();
+    await _fireAndForget(() => NotificationsService.save(
+          title: 'Extension approved · +$grantedDays day(s)',
+          body: '"$taskTitle": new due date is '
+              '${newDue!.toIso8601String().split('T').first}.',
+          kind: AppNotificationKind.task,
+          topic: FcmService.userTopic(assignee),
+          sentBy: sender.uid,
+          sentByName: sender.name,
+          eventId: eventId,
+          taskId: taskId,
+        ));
+    await _fireAndForget(() => FcmService.sendToUser(
+          uid: assignee,
+          title: 'Extension approved · +$grantedDays day(s)',
+          body: '"$taskTitle": new due date '
+              '${newDue!.toIso8601String().split('T').first}.',
+          data: {'kind': 'task', 'eventId': eventId, 'taskId': taskId},
+        ));
+  }
+
+  /// Admin denies a pending extension request. Stars are NOT refunded.
+  static Future<void> denyExtension({
+    required String eventId,
+    required String taskId,
+    required String reviewerUid,
+    required String reviewNote,
+  }) async {
+    String? memberUid;
+    String taskTitle = 'your task';
+    await _db.runTransaction((tx) async {
+      final taskRef = tasks(eventId).doc(taskId);
+      final snap = await tx.get(taskRef);
+      if (!snap.exists) throw Exception('Task not found');
+      final data = snap.data() ?? {};
+      if ((data['extensionStatus'] as String?) != 'pending') {
+        throw Exception('No pending extension on this task.');
+      }
+      memberUid = data['assignedTo'] as String?;
+      taskTitle = data['title'] as String? ?? taskTitle;
+      tx.update(taskRef, {
+        'extensionStatus': extensionStatusToString(ExtensionStatus.denied),
+        'extensionReviewedBy': reviewerUid,
+        'extensionReviewedAt': FieldValue.serverTimestamp(),
+        'extensionReviewNote': reviewNote,
+      });
+    });
+
+    final assignee = memberUid;
+    if (assignee == null) return;
+    final sender = _senderContext();
+    await _fireAndForget(() => NotificationsService.save(
+          title: 'Extension denied',
+          body: '"$taskTitle": $reviewNote',
+          kind: AppNotificationKind.task,
+          topic: FcmService.userTopic(assignee),
+          sentBy: sender.uid,
+          sentByName: sender.name,
+          eventId: eventId,
+          taskId: taskId,
+        ));
+    await _fireAndForget(() => FcmService.sendToUser(
+          uid: assignee,
+          title: 'Extension denied',
+          body: '"$taskTitle": $reviewNote',
+          data: {'kind': 'task', 'eventId': eventId, 'taskId': taskId},
+        ));
+  }
+
+  /// Admin-initiated extension. No member request, no star cost, does not
+  /// count against the cost ladder. Works on any task regardless of current
+  /// extension state — if there was a pending member request, this implicitly
+  /// resolves it as admin-approved.
+  static Future<void> adminExtendTask({
+    required String eventId,
+    required String taskId,
+    required String reviewerUid,
+    required int grantedDays,
+    String? reviewNote,
+  }) async {
+    if (grantedDays < 1 || grantedDays > 4) {
+      throw ArgumentError('grantedDays must be 1..4');
+    }
+    String? memberUid;
+    String taskTitle = 'your task';
+    DateTime? newDue;
+    await _db.runTransaction((tx) async {
+      final taskRef = tasks(eventId).doc(taskId);
+      final snap = await tx.get(taskRef);
+      if (!snap.exists) throw Exception('Task not found');
+      final data = snap.data() ?? {};
+      memberUid = data['assignedTo'] as String?;
+      taskTitle = data['title'] as String? ?? taskTitle;
+      final baseDue = (data['dueDate'] as Timestamp?)?.toDate();
+      if (baseDue == null) {
+        throw Exception('Task has no due date to extend.');
+      }
+      newDue = baseDue.add(Duration(days: grantedDays));
+
+      final updates = <String, dynamic>{
+        'extensionStatus': extensionStatusToString(ExtensionStatus.approved),
+        'extensionAdminInitiated': true,
+        'extensionGrantedDays': grantedDays,
+        'extensionGrantedUntil': Timestamp.fromDate(newDue!),
+        'extensionReviewedBy': reviewerUid,
+        'extensionReviewedAt': FieldValue.serverTimestamp(),
+        'extensionReviewNote': reviewNote,
+        // No change to extensionCount — admin kindness shouldn't punish the
+        // member's next request cost.
+      };
+      if ((data['status'] as String?) == 'rejected') {
+        updates['status'] = taskStatusToString(TaskStatus.pending);
+      }
+      tx.update(taskRef, updates);
+    });
+
+    final assignee = memberUid;
+    if (assignee == null || newDue == null) return;
+    final sender = _senderContext();
+    await _fireAndForget(() => NotificationsService.save(
+          title: 'Admin extended your task · +$grantedDays day(s)',
+          body: '"$taskTitle": new due date is '
+              '${newDue!.toIso8601String().split('T').first}.',
+          kind: AppNotificationKind.task,
+          topic: FcmService.userTopic(assignee),
+          sentBy: sender.uid,
+          sentByName: sender.name,
+          eventId: eventId,
+          taskId: taskId,
+        ));
+    await _fireAndForget(() => FcmService.sendToUser(
+          uid: assignee,
+          title: 'Admin extended your task · +$grantedDays day(s)',
+          body: '"$taskTitle": new due date '
+              '${newDue!.toIso8601String().split('T').first}.',
+          data: {'kind': 'task', 'eventId': eventId, 'taskId': taskId},
         ));
   }
 

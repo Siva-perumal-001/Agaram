@@ -43,13 +43,19 @@ service cloud.firestore {
       allow create: if isAdmin();
 
       // Self-update is an explicit allowlist — anything not listed
-      // (stars, email, role, isPresident, position, active, joinedAt)
-      // can only be changed by an admin or the president. Stars grow via
-      // admin-side transactions (approveTask + admin-marked attendance)
-      // so members never need to write to their own stars field.
+      // (email, role, isPresident, position, active, joinedAt) can only be
+      // changed by an admin or the president. Stars grow via admin-side
+      // transactions (approveTask + admin-marked attendance); members can
+      // only DECREMENT their own stars when paying for an extension request
+      // (a sole-field change where the new value is strictly less than old).
       allow update: if isSignedIn() && (
         (request.auth.uid == uid
           && onlyChanged(['name', 'phone', 'photoUrl', 'lastReadNotificationsAt']))
+        || (request.auth.uid == uid
+          && onlyChanged(['stars'])
+          && request.resource.data.stars is int
+          && request.resource.data.stars < resource.data.stars
+          && request.resource.data.stars >= 0)
         || (isAdmin() && notChanged(['isPresident']))
         || isPresident()
       );
@@ -83,11 +89,18 @@ service cloud.firestore {
         // Admin can create/update/delete freely.
         allow create, delete: if isAdmin();
 
-        // Admin can update anything. Members can only submit proof for their
-        // own pending/rejected task — transitioning status to 'submitted'.
-        // Review metadata (reviewNote, reviewedBy, reviewedAt, starsAwarded)
-        // is off-limits; only admins can write those. The previous version's
-        // reviewNote on a rejected task stays visible until admin re-reviews.
+        // Admin can update anything. Members can either:
+        //   (a) submit proof on their own pending/rejected task — transitioning
+        //       to 'submitted'. Only permitted before the effective due date
+        //       (dueDate, or extensionGrantedUntil if an extension is active).
+        //   (b) create/reopen an extension request on their own pending/rejected
+        //       task. `extensionCount` must monotonically increase by 1 and
+        //       `extensionStarCost` must equal the new count — those two checks
+        //       together mean the cost field is derivable from the doc, so the
+        //       client can't understate the cost. The corresponding stars-
+        //       decrement on /users/{uid} is constrained by the users rule
+        //       (can only go down). Review metadata (reviewNote, starsAwarded,
+        //       extensionReview*) stays admin-only.
         allow update: if isAdmin() || (
           resource.data.assignedTo == request.auth.uid
           && resource.data.status in ['pending', 'rejected']
@@ -95,6 +108,34 @@ service cloud.firestore {
           && onlyChanged([
               'proofUrl', 'proofType', 'memberNote',
               'status', 'submittedAt'
+          ])
+          && (
+            resource.data.get('dueDate', null) == null
+            || request.time < resource.data.dueDate
+            || (resource.data.get('extensionStatus', null) == 'approved'
+                && resource.data.get('extensionGrantedUntil', null) != null
+                && request.time < resource.data.extensionGrantedUntil)
+          )
+        ) || (
+          // (b) Extension request by the assigned member.
+          resource.data.assignedTo == request.auth.uid
+          && resource.data.status in ['pending', 'rejected']
+          && request.resource.data.status == resource.data.status
+          && request.resource.data.extensionStatus == 'pending'
+          && request.resource.data.extensionAdminInitiated == false
+          && request.resource.data.extensionRequestedDays in [1, 2, 3, 4]
+          && request.resource.data.extensionReason is string
+          && request.resource.data.extensionReason.size() > 0
+          && request.resource.data.extensionCount ==
+              (resource.data.get('extensionCount', 0)) + 1
+          && request.resource.data.extensionStarCost ==
+              request.resource.data.extensionCount
+          && onlyChanged([
+              'extensionStatus', 'extensionRequestedAt', 'extensionReason',
+              'extensionRequestedDays', 'extensionAdminInitiated',
+              'extensionStarCost', 'extensionCount',
+              'extensionGrantedUntil', 'extensionGrantedDays',
+              'extensionReviewedBy', 'extensionReviewedAt', 'extensionReviewNote'
           ])
         );
       }

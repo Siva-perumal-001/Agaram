@@ -59,6 +59,12 @@ class _AddTaskScreenState extends State<AddTaskScreen> {
 
   Future<void> _save() async {
     if (!_formKey.currentState!.validate()) return;
+    if (_dueDate == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Pick a due date for this task.')),
+      );
+      return;
+    }
     if (_memberUid == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Pick a member to assign this task to.')),
@@ -74,7 +80,7 @@ class _AddTaskScreenState extends State<AddTaskScreen> {
         description: _descCtrl.text.trim(),
         assignedTo: _memberUid!,
         assignedToName: _memberName ?? '',
-        dueDate: _dueDate,
+        dueDate: _dueDate!,
       );
       if (!mounted) return;
       Navigator.of(context).pop(true);
@@ -133,7 +139,7 @@ class _AddTaskScreenState extends State<AddTaskScreen> {
                 ),
               ),
               const SizedBox(height: 20),
-              _label('Due date'),
+              _label('Due date *'),
               const SizedBox(height: 8),
               InkWell(
                 onTap: _pickDue,

@@ -272,6 +272,7 @@ void main() {
         description: 'please',
         assignedTo: kMember,
         assignedToName: 'Mem',
+        dueDate: DateTime.now().add(const Duration(days: 7)),
       );
       final snap = await db
           .collection('events').doc(kEventId)
@@ -292,6 +293,7 @@ void main() {
         eventTitle: 'Welcome Meet',
         title: 't', description: '',
         assignedTo: kMember, assignedToName: 'Mem',
+        dueDate: DateTime.now().add(const Duration(days: 7)),
       );
       final ev = await db.collection('events').doc(kEventId).get();
       expect(ev.data()?['tasksCount'], 4);

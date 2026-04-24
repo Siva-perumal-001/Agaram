@@ -5,8 +5,10 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
+import 'package:provider/provider.dart';
 
 import '../../core/app_config.dart';
+import '../../core/auth_service.dart';
 import '../../core/cloudinary_service.dart';
 import '../../core/event_service.dart';
 import '../../core/theme.dart';
@@ -137,9 +139,18 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
   @override
   Widget build(BuildContext context) {
     final task = widget.task;
-    final canEdit = !widget.viewOnly &&
-        (task.status == TaskStatus.pending ||
-            task.status == TaskStatus.rejected);
+    // Upload is only possible if the task is open AND the effective due
+    // date hasn't passed (or an active approved extension is still in its
+    // window). Past-due tasks show the extension banner instead.
+    final statusOpen = task.status == TaskStatus.pending ||
+        task.status == TaskStatus.rejected;
+    final pastDueLocked = task.isPastDue && !task.hasActiveExtension;
+    final canEdit =
+        !widget.viewOnly && statusOpen && !pastDueLocked && !task.hasPendingExtension;
+    final showExtensionBanner = !widget.viewOnly && statusOpen &&
+        (pastDueLocked ||
+            task.hasPendingExtension ||
+            task.extensionStatus == ExtensionStatus.denied);
 
     return Scaffold(
       appBar: AppBar(title: const Text('Task Detail')),
@@ -153,6 +164,10 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
               _taskCard(task),
               const SizedBox(height: 20),
               _statusBanner(task),
+              if (showExtensionBanner) ...[
+                const SizedBox(height: 12),
+                _extensionBanner(task),
+              ],
               if (canEdit) ...[
                 const SizedBox(height: 20),
                 _uploadSection(),
@@ -171,6 +186,177 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
       ),
     );
   }
+
+  Widget _extensionBanner(AgaramTask task) {
+    final cost = task.nextExtensionCost;
+    final stars = context.watch<AuthService>().currentUser?.stars ?? 0;
+    final canAfford = stars >= cost;
+
+    // State 1: pending review
+    if (task.extensionStatus == ExtensionStatus.pending) {
+      return _bannerBox(
+        bg: AgaramColors.warningContainer,
+        fg: AgaramColors.warning,
+        icon: Icons.hourglass_bottom_rounded,
+        title:
+            'Extension requested · ${task.extensionRequestedDays ?? 1} day(s)',
+        body:
+            'Waiting for admin review. Cost: −${task.extensionStarCost} star(s).',
+      );
+    }
+
+    // State 2: approved but still expired (window passed)
+    // State 3: denied
+    // State 4: past-due, no prior extension
+    String title;
+    String body;
+    if (task.extensionStatus == ExtensionStatus.approved &&
+        task.isPastDue) {
+      title = 'Extension also expired';
+      body =
+          'Your extension ended on ${_fmt(task.extensionGrantedUntil)}. Request another? Cost: −$cost star(s).';
+    } else if (task.extensionStatus == ExtensionStatus.denied) {
+      title = 'Extension denied';
+      final note = (task.extensionReviewNote ?? '').trim();
+      body = note.isEmpty
+          ? 'Your request was denied. You can request again — cost: −$cost star(s).'
+          : '"$note" — request again at cost −$cost star(s).';
+    } else {
+      title = 'Task past due';
+      body =
+          'Uploads are locked. Request an extension to continue — cost: −$cost star(s).';
+    }
+
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: AgaramColors.errorContainer,
+        borderRadius: BorderRadius.circular(14),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(Icons.lock_clock_rounded,
+                  color: AgaramColors.error, size: 20),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  title,
+                  style: GoogleFonts.inter(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w700,
+                    color: AgaramColors.error,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Text(
+            body,
+            style: GoogleFonts.inter(
+              fontSize: 13,
+              color: AgaramColors.error,
+              height: 1.4,
+            ),
+          ),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              Text(
+                'Your stars: $stars',
+                style: GoogleFonts.inter(
+                  fontSize: 12,
+                  color: AgaramColors.onSurfaceVariant,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              const Spacer(),
+              FilledButton.icon(
+                onPressed: canAfford ? _openRequestSheet : null,
+                icon: const Icon(Icons.schedule_send_rounded, size: 18),
+                label: Text(canAfford
+                    ? 'Request Extension'
+                    : 'Need $cost stars'),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _bannerBox({
+    required Color bg,
+    required Color fg,
+    required IconData icon,
+    required String title,
+    required String body,
+  }) {
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(color: bg, borderRadius: BorderRadius.circular(14)),
+      child: Row(
+        children: [
+          Icon(icon, color: fg, size: 20),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: GoogleFonts.inter(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w700,
+                    color: fg,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  body,
+                  style: GoogleFonts.inter(
+                    fontSize: 13,
+                    color: fg,
+                    height: 1.4,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _openRequestSheet() async {
+    final memberUid = context.read<AuthService>().currentUser?.uid;
+    if (memberUid == null) return;
+    final submitted = await showModalBottomSheet<bool>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: AgaramColors.surface,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (_) => _ExtensionRequestSheet(
+        task: widget.task,
+        memberUid: memberUid,
+        cost: widget.task.nextExtensionCost,
+      ),
+    );
+    if (submitted == true && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Extension requested ✓')),
+      );
+      Navigator.of(context).pop(true);
+    }
+  }
+
+  String _fmt(DateTime? d) =>
+      d == null ? '—' : DateFormat('MMM d, yyyy').format(d);
 
   Widget _taskCard(AgaramTask task) {
     return Container(
@@ -263,7 +449,7 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
               ),
             ),
           ],
-          if (task.dueDate != null) ...[
+          if (task.effectiveDueDate != null) ...[
             const SizedBox(height: 14),
             Row(
               children: [
@@ -274,12 +460,31 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
                 ),
                 const SizedBox(width: 6),
                 Text(
-                  'Due ${DateFormat('MMM d').format(task.dueDate!)}',
+                  'Due ${DateFormat('MMM d').format(task.effectiveDueDate!)}',
                   style: GoogleFonts.inter(
                     fontSize: 13,
                     color: AgaramColors.onSurfaceVariant,
                   ),
                 ),
+                if (task.extensionGrantedDays != null) ...[
+                  const SizedBox(width: 8),
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 8, vertical: 3),
+                    decoration: BoxDecoration(
+                      color: AgaramColors.successContainer,
+                      borderRadius: BorderRadius.circular(999),
+                    ),
+                    child: Text(
+                      'Extended +${task.extensionGrantedDays}d',
+                      style: GoogleFonts.inter(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w700,
+                        color: AgaramColors.success,
+                      ),
+                    ),
+                  ),
+                ],
               ],
             ),
           ],
@@ -570,6 +775,159 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
           ),
         ],
       ],
+    );
+  }
+}
+
+class _ExtensionRequestSheet extends StatefulWidget {
+  final AgaramTask task;
+  final String memberUid;
+  final int cost;
+  const _ExtensionRequestSheet({
+    required this.task,
+    required this.memberUid,
+    required this.cost,
+  });
+
+  @override
+  State<_ExtensionRequestSheet> createState() => _ExtensionRequestSheetState();
+}
+
+class _ExtensionRequestSheetState extends State<_ExtensionRequestSheet> {
+  int _days = 1;
+  final _reasonCtrl = TextEditingController();
+  bool _sending = false;
+
+  @override
+  void dispose() {
+    _reasonCtrl.dispose();
+    super.dispose();
+  }
+
+  Future<void> _submit() async {
+    final reason = _reasonCtrl.text.trim();
+    if (reason.length < 5) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please write a short reason (5+ chars).')),
+      );
+      return;
+    }
+    setState(() => _sending = true);
+    try {
+      await EventService.requestExtension(
+        eventId: widget.task.eventId,
+        taskId: widget.task.id,
+        memberUid: widget.memberUid,
+        requestedDays: _days,
+        reason: reason,
+      );
+      if (!mounted) return;
+      Navigator.of(context).pop(true);
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Request failed: $e')),
+      );
+    } finally {
+      if (mounted) setState(() => _sending = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final bottomInset = MediaQuery.of(context).viewInsets.bottom;
+    return Padding(
+      padding: EdgeInsets.only(bottom: bottomInset),
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(20, 20, 20, 28),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Container(
+              width: 40,
+              height: 4,
+              margin: const EdgeInsets.only(bottom: 16),
+              decoration: BoxDecoration(
+                color: AgaramColors.surfaceContainerHigh,
+                borderRadius: BorderRadius.circular(999),
+              ),
+            ),
+            Text(
+              'Request extension',
+              style: GoogleFonts.inter(
+                fontSize: 20,
+                fontWeight: FontWeight.w700,
+                color: AgaramColors.primary,
+              ),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              'Cost: −${widget.cost} star(s). Denied requests do NOT refund stars.',
+              style: GoogleFonts.inter(
+                fontSize: 12,
+                color: AgaramColors.onSurfaceVariant,
+              ),
+            ),
+            const SizedBox(height: 20),
+            Text(
+              'How many days?',
+              style: GoogleFonts.inter(
+                fontSize: 14,
+                fontWeight: FontWeight.w600,
+                color: AgaramColors.onSurface,
+              ),
+            ),
+            const SizedBox(height: 10),
+            Wrap(
+              spacing: 10,
+              children: [1, 2, 3, 4].map((d) {
+                final selected = _days == d;
+                return ChoiceChip(
+                  label: Text('$d day${d == 1 ? '' : 's'}'),
+                  selected: selected,
+                  onSelected: (_) => setState(() => _days = d),
+                );
+              }).toList(),
+            ),
+            const SizedBox(height: 20),
+            Text(
+              'Reason (required)',
+              style: GoogleFonts.inter(
+                fontSize: 14,
+                fontWeight: FontWeight.w600,
+                color: AgaramColors.onSurface,
+              ),
+            ),
+            const SizedBox(height: 8),
+            TextField(
+              controller: _reasonCtrl,
+              maxLines: 3,
+              maxLength: 200,
+              decoration: const InputDecoration(
+                hintText: 'Why do you need more time?',
+              ),
+            ),
+            const SizedBox(height: 8),
+            SizedBox(
+              width: double.infinity,
+              child: FilledButton(
+                onPressed: _sending ? null : _submit,
+                child: _sending
+                    ? const SizedBox(
+                        height: 22,
+                        width: 22,
+                        child: CircularProgressIndicator(
+                          color: AgaramColors.onPrimary,
+                          strokeWidth: 2.5,
+                        ),
+                      )
+                    : Text('Request · −${widget.cost} star(s)'),
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }
