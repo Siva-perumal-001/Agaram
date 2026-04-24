@@ -148,7 +148,9 @@ class _NotificationBell extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return StreamBuilder<int>(
-      stream: uid == null ? const Stream.empty() : NotificationsService.unreadCount(uid!),
+      stream: uid == null
+          ? const Stream.empty()
+          : NotificationsService.unreadCount(uid!, isAdmin: false),
       builder: (_, snap) {
         final count = snap.data ?? 0;
         return Stack(

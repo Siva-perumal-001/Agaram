@@ -171,7 +171,7 @@ class AdminDashboardScreen extends StatelessWidget {
         Padding(
           padding: const EdgeInsets.only(right: 8),
           child: StreamBuilder<int>(
-            stream: NotificationsService.unreadCount(uid),
+            stream: NotificationsService.unreadCount(uid, isAdmin: true),
             builder: (_, snap) {
               final count = snap.data ?? 0;
               return Stack(

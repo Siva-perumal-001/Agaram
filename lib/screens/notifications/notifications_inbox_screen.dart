@@ -58,7 +58,7 @@ class _NotificationsInboxScreenState extends State<NotificationsInboxScreen> {
               ),
             ),
             Expanded(
-              child: _list(user?.uid),
+              child: _list(user?.uid, isAdmin),
             ),
           ],
         ),
@@ -109,7 +109,7 @@ class _NotificationsInboxScreenState extends State<NotificationsInboxScreen> {
     );
   }
 
-  Widget _list(String? uid) {
+  Widget _list(String? uid, bool isAdmin) {
     return StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
       stream: NotificationsService.stream(),
       builder: (_, snap) {
@@ -124,6 +124,7 @@ class _NotificationsInboxScreenState extends State<NotificationsInboxScreen> {
         }
         var items = (snap.data?.docs ?? [])
             .map(AppNotification.fromFirestore)
+            .where((n) => isNotificationForViewer(n, uid, isAdmin))
             .toList();
         items = items.where(_matches).toList();
 
