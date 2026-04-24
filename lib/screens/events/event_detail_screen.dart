@@ -430,7 +430,7 @@ class _TasksSliver extends StatelessWidget {
     } else {
       Navigator.of(context).push(
         MaterialPageRoute(
-          builder: (_) => TaskDetailScreen(task: task, viewOnly: !isMine && !admin),
+          builder: (_) => TaskDetailScreen(task: task, viewOnly: !isMine),
         ),
       );
     }

@@ -17,9 +17,10 @@ import '../../widgets/status_chip.dart';
 class TaskDetailScreen extends StatefulWidget {
   final AgaramTask task;
 
-  /// When true the viewer is neither the assignee nor an admin (another
-  /// member peeking at someone else's task). Hides the upload section and
-  /// shows the existing proof (if any) read-only.
+  /// When true the viewer is not the assignee. Only the assigned member can
+  /// upload proof — admins reviewing a submission go through TaskReviewScreen,
+  /// not this screen. Hides the upload section and shows the existing proof
+  /// (if any) read-only.
   final bool viewOnly;
 
   const TaskDetailScreen({super.key, required this.task, this.viewOnly = false});
@@ -530,13 +531,18 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
 
   Widget _submittedProof(AgaramTask task) {
     if (task.proofUrl == null) return const SizedBox.shrink();
+    final assignee = task.assignedToName.trim();
+    final headerLabel = widget.viewOnly
+        ? (assignee.isEmpty ? 'Submission' : "$assignee's submission")
+        : 'Your submission';
+    final notePrefix = widget.viewOnly ? 'Note from member' : 'Your note';
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Row(
           children: [
             Text(
-              'Your submission',
+              headerLabel,
               style: GoogleFonts.inter(
                 fontSize: 18,
                 fontWeight: FontWeight.w700,
@@ -555,7 +561,7 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
         if (task.memberNote != null && task.memberNote!.isNotEmpty) ...[
           const SizedBox(height: 12),
           Text(
-            'Your note: "${task.memberNote}"',
+            '$notePrefix: "${task.memberNote}"',
             style: GoogleFonts.inter(
               fontSize: 13,
               fontStyle: FontStyle.italic,
