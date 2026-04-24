@@ -35,7 +35,7 @@ class FcmService {
     await _messaging.requestPermission(alert: true, badge: true, sound: true);
 
     if (!_localInitialized) {
-      const android = AndroidInitializationSettings('@mipmap/ic_launcher');
+      const android = AndroidInitializationSettings('@mipmap/launcher_icon');
       await _local.initialize(
         const InitializationSettings(android: android),
         onDidReceiveNotificationResponse: (resp) =>
@@ -114,7 +114,7 @@ class FcmService {
           channelDescription: _androidChannel.description,
           importance: Importance.high,
           priority: Priority.high,
-          icon: '@mipmap/ic_launcher',
+          icon: '@mipmap/launcher_icon',
         ),
       ),
       payload: jsonEncode(message.data),
