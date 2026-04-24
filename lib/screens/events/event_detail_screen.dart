@@ -15,6 +15,7 @@ import '../tasks/task_detail_screen.dart';
 import '../tasks/task_review_screen.dart';
 import 'add_task_screen.dart';
 import 'attendance_tab.dart';
+import 'drive_archive_sheet.dart';
 import 'event_form_screen.dart';
 import 'gallery_tab.dart';
 
@@ -189,6 +190,26 @@ class _EventHero extends StatelessWidget {
       backgroundColor: AgaramColors.primary,
       iconTheme: const IconThemeData(color: Colors.white),
       actions: [
+        if (isAdmin)
+          IconButton(
+            icon: const Icon(Icons.drive_folder_upload_rounded,
+                color: Colors.white),
+            tooltip: 'Archive to Drive',
+            onPressed: () {
+              showModalBottomSheet(
+                context: context,
+                isScrollControlled: true,
+                showDragHandle: true,
+                backgroundColor: AgaramColors.surface,
+                shape: const RoundedRectangleBorder(
+                  borderRadius: BorderRadius.vertical(
+                    top: Radius.circular(24),
+                  ),
+                ),
+                builder: (_) => DriveArchiveSheet(event: event),
+              );
+            },
+          ),
         if (isAdmin)
           IconButton(
             icon: const Icon(Icons.edit_rounded, color: Colors.white),
