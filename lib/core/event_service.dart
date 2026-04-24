@@ -158,20 +158,56 @@ class EventService {
     required String proofUrl,
     required ProofType proofType,
     String? memberNote,
-  }) {
+  }) async {
     // Review metadata (reviewNote / reviewedBy / reviewedAt) is admin-only
     // per firestore.rules and intentionally left in place here. On a
     // resubmit-after-rejection the previous reviewNote stays until the
     // admin writes a new review — review UI should show it as "previous
     // feedback" and the admin overwrites when they approve/reject the
     // fresh submission.
-    return tasks(eventId).doc(taskId).update({
-      'proofUrl': proofUrl,
-      'proofType': proofType == ProofType.image ? 'image' : 'pdf',
-      'memberNote': memberNote,
-      'status': taskStatusToString(TaskStatus.submitted),
-      'submittedAt': FieldValue.serverTimestamp(),
+    String taskTitle = 'a task';
+    String eventTitle = 'an event';
+    String assigneeName = 'A member';
+    await _db.runTransaction((tx) async {
+      final ref = tasks(eventId).doc(taskId);
+      final snap = await tx.get(ref);
+      if (snap.exists) {
+        final data = snap.data() ?? {};
+        taskTitle = data['title'] as String? ?? taskTitle;
+        eventTitle = data['eventTitle'] as String? ?? eventTitle;
+        assigneeName = data['assignedToName'] as String? ?? assigneeName;
+      }
+      tx.update(ref, {
+        'proofUrl': proofUrl,
+        'proofType': proofType == ProofType.image ? 'image' : 'pdf',
+        'memberNote': memberNote,
+        'status': taskStatusToString(TaskStatus.submitted),
+        'submittedAt': FieldValue.serverTimestamp(),
+      });
     });
+
+    final sender = _senderContext();
+    final submitterName = assigneeName.isNotEmpty ? assigneeName : sender.name;
+    await _fireAndForget(() => NotificationsService.save(
+          title: 'Proof submitted: $taskTitle',
+          body: '$submitterName uploaded proof for "$taskTitle" ($eventTitle).',
+          kind: AppNotificationKind.task,
+          topic: AppConfig.topicAdmins,
+          sentBy: sender.uid,
+          sentByName: sender.name,
+          eventId: eventId,
+          taskId: taskId,
+        ));
+    await _fireAndForget(() => FcmService.sendToTopic(
+          topic: AppConfig.topicAdmins,
+          title: 'Proof submitted: $taskTitle',
+          body: '$submitterName uploaded proof. Tap to review.',
+          data: {
+            'kind': 'task',
+            'eventId': eventId,
+            'taskId': taskId,
+          },
+        ));
   }
 
   static Future<void> approveTask({
