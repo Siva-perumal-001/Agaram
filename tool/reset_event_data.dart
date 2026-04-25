@@ -95,7 +95,7 @@ Future<List<Map<String, dynamic>>> _listDocs(
   do {
     final uri = Uri.parse(url).replace(queryParameters: {
       'pageSize': '300',
-      if (pageToken != null) 'pageToken': pageToken,
+      'pageToken': ?pageToken,
     });
     final resp = await client.get(uri);
     if (resp.statusCode == 404) return out; // collection doesn't exist
