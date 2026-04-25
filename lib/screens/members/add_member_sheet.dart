@@ -1,3 +1,6 @@
+import 'dart:async';
+
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -26,8 +29,47 @@ class _AddMemberSheetState extends State<AddMemberSheet> {
   bool _saving = false;
   MemberCreationResult? _result;
 
+  static const _exclusivePositions = {
+    AppPosition.secretary,
+    AppPosition.jointSecretary,
+    AppPosition.treasurer,
+    AppPosition.jointTreasurer,
+    AppPosition.vicePresident,
+    AppPosition.president,
+  };
+
+  Set<String> _takenPositions = {};
+  StreamSubscription<QuerySnapshot<Map<String, dynamic>>>? _usersSub;
+
+  @override
+  void initState() {
+    super.initState();
+    _usersSub = FirebaseFirestore.instance
+        .collection('users')
+        .snapshots()
+        .listen((snap) {
+      final taken = <String>{};
+      for (final doc in snap.docs) {
+        final data = doc.data();
+        if (data['active'] == false) continue;
+        final pos = data['position'] as String?;
+        if (pos != null && _exclusivePositions.contains(pos)) {
+          taken.add(pos);
+        }
+      }
+      if (!mounted) return;
+      setState(() {
+        _takenPositions = taken;
+        if (_position != null && taken.contains(_position)) {
+          _position = null;
+        }
+      });
+    });
+  }
+
   @override
   void dispose() {
+    _usersSub?.cancel();
     _name.dispose();
     _email.dispose();
     _phone.dispose();
@@ -211,12 +253,14 @@ class _AddMemberSheetState extends State<AddMemberSheet> {
             isExpanded: true,
             items: [
               const DropdownMenuItem(value: null, child: Text('None')),
-              ...AppPosition.all.map(
-                (p) => DropdownMenuItem(
-                  value: p,
-                  child: Text(AppPosition.label(p)),
-                ),
-              ),
+              ...AppPosition.all
+                  .where((p) => !_takenPositions.contains(p))
+                  .map(
+                    (p) => DropdownMenuItem(
+                      value: p,
+                      child: Text(AppPosition.label(p)),
+                    ),
+                  ),
             ],
             onChanged: (v) => setState(() => _position = v),
             decoration: const InputDecoration(
