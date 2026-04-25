@@ -44,18 +44,14 @@ service cloud.firestore {
 
       // Self-update is an explicit allowlist — anything not listed
       // (email, role, isPresident, position, active, joinedAt) can only be
-      // changed by an admin or the president. Stars grow via admin-side
-      // transactions (approveTask + admin-marked attendance); members can
-      // only DECREMENT their own stars when paying for an extension request
-      // (a sole-field change where the new value is strictly less than old).
+      // changed by an admin or the president. The `stars` field is no
+      // longer used by any feature — earned stars and spendable balance are
+      // both derived live from approved tasks, attendance, and on-task
+      // extensionCount (see StarsService). Legacy values on user docs are
+      // ignored.
       allow update: if isSignedIn() && (
         (request.auth.uid == uid
           && onlyChanged(['name', 'phone', 'photoUrl', 'lastReadNotificationsAt']))
-        || (request.auth.uid == uid
-          && onlyChanged(['stars'])
-          && request.resource.data.stars is int
-          && request.resource.data.stars < resource.data.stars
-          && request.resource.data.stars >= 0)
         || (isAdmin() && notChanged(['isPresident']))
         || isPresident()
       );

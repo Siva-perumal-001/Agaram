@@ -6,13 +6,16 @@ import 'package:provider/provider.dart';
 import '../../core/auth_service.dart';
 import '../../core/kural_service.dart';
 import '../../core/notifications_service.dart';
+import '../../core/stars_service.dart';
 import '../../core/theme.dart';
 import '../../models/app_user.dart';
+import '../../models/event.dart';
 import '../../models/kural.dart';
 import '../../widgets/agaram_logo.dart';
 import '../../widgets/event_preview_card.dart';
 import '../../widgets/kural_card.dart';
 import '../../widgets/star_card.dart';
+import '../events/event_detail_screen.dart';
 import '../leaderboard/leaderboard_screen.dart';
 import '../notifications/notifications_inbox_screen.dart';
 
@@ -36,7 +39,11 @@ class _MemberHomeScreenState extends State<MemberHomeScreen> {
   @override
   Widget build(BuildContext context) {
     final user = context.watch<AuthService>().currentUser;
-    if (user == null) return const SizedBox.shrink();
+    if (user == null) {
+      return const Scaffold(
+        body: Center(child: CircularProgressIndicator()),
+      );
+    }
 
     return Scaffold(
       appBar: _buildAppBar(context),
@@ -196,22 +203,15 @@ class _StarStreamCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final stream = FirebaseFirestore.instance
-        .collection('users')
-        .doc(uid)
-        .snapshots();
-    return StreamBuilder<DocumentSnapshot<Map<String, dynamic>>>(
-      stream: stream,
-      builder: (_, snap) {
-        final stars = (snap.data?.data()?['stars'] as num?)?.toInt() ?? 0;
-        return StarCard(
-          stars: stars,
-          rank: null,
-          onViewLeaderboard: () => Navigator.of(context).push(
-            MaterialPageRoute(builder: (_) => const LeaderboardScreen()),
-          ),
-        );
-      },
+    return LiveStarsBuilder(
+      uid: uid,
+      builder: (context, stars) => StarCard(
+        stars: stars,
+        rank: null,
+        onViewLeaderboard: () => Navigator.of(context).push(
+          MaterialPageRoute(builder: (_) => const LeaderboardScreen()),
+        ),
+      ),
     );
   }
 }
@@ -221,9 +221,7 @@ class _UpcomingEventsStrip extends StatelessWidget {
   Widget build(BuildContext context) {
     final stream = FirebaseFirestore.instance
         .collection('events')
-        .where('status', whereIn: ['upcoming', 'ongoing'])
         .orderBy('date')
-        .limit(5)
         .snapshots();
     return SizedBox(
       height: 250,
@@ -233,7 +231,20 @@ class _UpcomingEventsStrip extends StatelessWidget {
           if (snap.connectionState == ConnectionState.waiting) {
             return const _SkeletonCard(height: 250);
           }
-          final docs = snap.data?.docs ?? [];
+          final now = DateTime.now();
+          final docs = (snap.data?.docs ?? []).where((d) {
+            final data = d.data();
+            final ts = data['date'];
+            final date = ts is Timestamp ? ts.toDate() : DateTime.now();
+            final duration = (data['durationMinutes'] as num?)?.toInt() ?? 120;
+            final effective = effectiveEventStatus(
+              date: date,
+              durationMinutes: duration,
+              now: now,
+            );
+            return effective == EventStatus.upcoming ||
+                effective == EventStatus.ongoing;
+          }).take(5).toList();
           if (docs.isEmpty) return const _EmptyEventsStrip();
           return ListView.separated(
             scrollDirection: Axis.horizontal,
@@ -243,6 +254,7 @@ class _UpcomingEventsStrip extends StatelessWidget {
               final d = docs[i].data();
               final ts = d['date'];
               final date = ts is Timestamp ? ts.toDate() : DateTime.now();
+              final eventId = docs[i].id;
               return EventPreviewCard(
                 width: 280,
                 title: (d['title'] as String?) ?? 'Untitled event',
@@ -250,6 +262,12 @@ class _UpcomingEventsStrip extends StatelessWidget {
                 date: date,
                 tasksCount: (d['tasksCount'] as num?)?.toInt() ?? 0,
                 bannerUrl: d['bannerUrl'] as String?,
+                isMeeting: (d['kind'] as String?) == 'meeting',
+                onTap: () => Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (_) => EventDetailScreen(eventId: eventId),
+                  ),
+                ),
               );
             },
           );

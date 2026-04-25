@@ -11,6 +11,7 @@ import '../../core/app_config.dart';
 import '../../core/auth_service.dart';
 import '../../core/cloudinary_service.dart';
 import '../../core/routes.dart';
+import '../../core/stars_service.dart';
 import '../../core/theme.dart';
 import '../../models/app_user.dart';
 import '../../widgets/achievement_badge.dart';
@@ -86,7 +87,7 @@ class ProfileScreen extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 14),
-              _achievementsStrip(user),
+              _AchievementsRow(user: user),
               const SizedBox(height: 28),
               _personalInfo(user),
               const SizedBox(height: 28),
@@ -115,39 +116,6 @@ class ProfileScreen extends StatelessWidget {
           ),
         ),
       ),
-    );
-  }
-
-  Widget _achievementsStrip(AppUser user) {
-    final stars = user.stars;
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceAround,
-      children: [
-        AchievementBadge(
-          icon: Icons.emoji_events_rounded,
-          label: 'First Task',
-          color: AgaramColors.secondaryContainer,
-          unlocked: stars >= 3,
-        ),
-        AchievementBadge(
-          icon: Icons.event_available_rounded,
-          label: '5 Events',
-          color: AgaramColors.infoSoft,
-          unlocked: stars >= 10,
-        ),
-        AchievementBadge(
-          icon: Icons.edit_note_rounded,
-          label: 'Poet',
-          color: AgaramColors.accentPeach,
-          unlocked: false,
-        ),
-        AchievementBadge(
-          icon: Icons.workspace_premium_rounded,
-          label: '10 Stars',
-          color: AgaramColors.secondaryContainer,
-          unlocked: stars >= 10,
-        ),
-      ],
     );
   }
 
@@ -342,90 +310,75 @@ class _StarsSummary extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final stream = FirebaseFirestore.instance
-        .collection('users')
-        .doc(user.uid)
-        .snapshots();
-    return StreamBuilder<DocumentSnapshot<Map<String, dynamic>>>(
-      stream: stream,
-      builder: (_, snap) {
-        final stars = (snap.data?.data()?['stars'] as num?)?.toInt() ?? user.stars;
-        return Container(
-          padding: const EdgeInsets.all(20),
-          decoration: BoxDecoration(
-            color: AgaramColors.surfaceContainerLowest,
-            borderRadius: BorderRadius.circular(20),
-            boxShadow: [
-              BoxShadow(
-                color: AgaramColors.primary.withValues(alpha: 0.05),
-                blurRadius: 12,
-                offset: const Offset(0, 4),
-              ),
-            ],
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: AgaramColors.surfaceContainerLowest,
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: AgaramColors.primary.withValues(alpha: 0.05),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
           ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          LiveStarsBuilder(
+            uid: user.uid,
+            builder: (_, stars) => Row(
+              children: [
+                const Icon(
+                  Icons.star_rounded,
+                  size: 24,
+                  color: AgaramColors.secondary,
+                ),
+                const SizedBox(width: 10),
+                Text(
+                  '$stars Stars Earned',
+                  style: GoogleFonts.inter(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w700,
+                    color: AgaramColors.onSurface,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 14),
+          Row(
             children: [
-              Row(
-                children: [
-                  const Icon(
-                    Icons.star_rounded,
-                    size: 24,
-                    color: AgaramColors.secondary,
-                  ),
-                  const SizedBox(width: 10),
-                  Text(
-                    '$stars Stars Earned',
-                    style: GoogleFonts.inter(
-                      fontSize: 18,
-                      fontWeight: FontWeight.w700,
-                      color: AgaramColors.onSurface,
-                    ),
-                  ),
-                ],
+              Expanded(
+                child: _LiveCountBreakdown(
+                  stream: StarsService.approvedTasksQuery(user.uid).snapshots(),
+                  label: 'Tasks',
+                  subLabel: (n) =>
+                      'approved (+${n * AppConfig.starsPerApprovedTask})',
+                ),
               ),
-              const SizedBox(height: 14),
-              Row(
-                children: [
-                  Expanded(
-                    child: _LiveCountBreakdown(
-                      stream: FirebaseFirestore.instance
-                          .collectionGroup('tasks')
-                          .where('assignedTo', isEqualTo: user.uid)
-                          .where('status', isEqualTo: 'approved')
-                          .snapshots(),
-                      label: 'Tasks',
-                      subLabel: (n) =>
-                          'approved (+${n * AppConfig.starsPerApprovedTask})',
-                    ),
-                  ),
-                  const SizedBox(
-                    height: 40,
-                    child: VerticalDivider(
-                      color: AgaramColors.outlineVariant,
-                      thickness: 0.8,
-                    ),
-                  ),
-                  Expanded(
-                    child: _LiveCountBreakdown(
-                      stream: FirebaseFirestore.instance
-                          .collectionGroup('attendance')
-                          .where('userId', isEqualTo: user.uid)
-                          .snapshots(),
-                      label: 'Events',
-                      subLabel: (n) =>
-                          'attended (+${n * AppConfig.starsPerAttendance})',
-                    ),
-                  ),
-                ],
+              const SizedBox(
+                height: 40,
+                child: VerticalDivider(
+                  color: AgaramColors.outlineVariant,
+                  thickness: 0.8,
+                ),
+              ),
+              Expanded(
+                child: _LiveCountBreakdown(
+                  stream: StarsService.attendanceQuery(user.uid).snapshots(),
+                  label: 'Events',
+                  subLabel: (n) =>
+                      'attended (+${n * AppConfig.starsPerAttendance})',
+                ),
               ),
             ],
           ),
-        );
-      },
+        ],
+      ),
     );
   }
-
 }
 
 class _LiveCountBreakdown extends StatelessWidget {
@@ -465,6 +418,61 @@ class _LiveCountBreakdown extends StatelessWidget {
               ),
             ),
           ],
+        );
+      },
+    );
+  }
+}
+
+class _AchievementsRow extends StatelessWidget {
+  final AppUser user;
+  const _AchievementsRow({required this.user});
+
+  @override
+  Widget build(BuildContext context) {
+    return StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
+      stream: StarsService.approvedTasksQuery(user.uid).snapshots(),
+      builder: (_, taskSnap) {
+        final taskCount = taskSnap.data?.docs.length ?? 0;
+        return StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
+          stream: StarsService.attendanceQuery(user.uid).snapshots(),
+          builder: (_, attSnap) {
+            final attCount = attSnap.data?.docs.length ?? 0;
+            final stars = taskCount * AppConfig.starsPerApprovedTask +
+                attCount * AppConfig.starsPerAttendance;
+            final joinedAt = user.joinedAt;
+            final isVeteran = joinedAt != null &&
+                DateTime.now().difference(joinedAt).inDays >= 30;
+            return Row(
+              mainAxisAlignment: MainAxisAlignment.spaceAround,
+              children: [
+                AchievementBadge(
+                  icon: Icons.emoji_events_rounded,
+                  label: 'First Task',
+                  color: AgaramColors.secondaryContainer,
+                  unlocked: taskCount >= 1,
+                ),
+                AchievementBadge(
+                  icon: Icons.event_available_rounded,
+                  label: '5 Events',
+                  color: AgaramColors.infoSoft,
+                  unlocked: attCount >= 5,
+                ),
+                AchievementBadge(
+                  icon: Icons.verified_rounded,
+                  label: 'Veteran',
+                  color: AgaramColors.accentPeach,
+                  unlocked: isVeteran,
+                ),
+                AchievementBadge(
+                  icon: Icons.workspace_premium_rounded,
+                  label: '10 Stars',
+                  color: AgaramColors.secondaryContainer,
+                  unlocked: stars >= 10,
+                ),
+              ],
+            );
+          },
         );
       },
     );

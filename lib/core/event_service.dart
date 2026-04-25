@@ -6,6 +6,7 @@ import 'app_config.dart';
 import 'fcm_service.dart';
 import 'notifications_service.dart';
 import 'reminder_service.dart';
+import 'stars_service.dart';
 import '../models/app_notification.dart';
 import '../models/task.dart';
 
@@ -220,17 +221,12 @@ class EventService {
     String? taskTitle;
     await _db.runTransaction((tx) async {
       final taskRef = tasks(eventId).doc(taskId);
-      final userRef = _db.collection('users').doc(memberUid);
 
       final taskSnap = await tx.get(taskRef);
       if (!taskSnap.exists) throw Exception('Task not found');
       final currentStatus = taskSnap.data()?['status'] as String? ?? 'pending';
       if (currentStatus == 'approved') return;
       taskTitle = taskSnap.data()?['title'] as String?;
-
-      final userSnap = await tx.get(userRef);
-      final currentStars =
-          (userSnap.data()?['stars'] as num?)?.toInt() ?? 0;
 
       tx.update(taskRef, {
         'status': taskStatusToString(TaskStatus.approved),
@@ -239,9 +235,8 @@ class EventService {
         'reviewNote': reviewNote,
         'starsAwarded': AppConfig.starsPerApprovedTask,
       });
-      tx.update(userRef, {
-        'stars': currentStars + AppConfig.starsPerApprovedTask,
-      });
+      // Stars are derived live from approved tasks + attendance docs (see
+      // StarsService). No write to users.stars is needed.
     });
 
     final sender = _senderContext();
@@ -330,7 +325,9 @@ class EventService {
   // is locked into the doc before the admin sees it. Denied requests do not
   // refund stars. Admin-proactive extensions never increment this counter.
 
-  /// Member-initiated extension request. Deducts stars + records the ask.
+  /// Member-initiated extension request. Records the ask on the task; the
+  /// star cost is derived live from the task's `extensionCount` (see
+  /// [StarsService.balanceFor]).
   static Future<void> requestExtension({
     required String eventId,
     required String taskId,
@@ -345,14 +342,18 @@ class EventService {
       throw ArgumentError('reason is required');
     }
 
+    // Affordability is a live calculation (earned − spent), so it cannot
+    // happen inside a Firestore transaction (no collectionGroup support).
+    // We check it before opening the transaction; the transaction itself
+    // re-reads the task to enforce per-task atomicity.
+    final balance = await StarsService.balanceFor(memberUid);
+
     String taskTitle = 'your task';
     int cost = 0;
     await _db.runTransaction((tx) async {
       final taskRef = tasks(eventId).doc(taskId);
-      final userRef = _db.collection('users').doc(memberUid);
       final taskSnap = await tx.get(taskRef);
       if (!taskSnap.exists) throw Exception('Task not found');
-      final userSnap = await tx.get(userRef);
 
       final data = taskSnap.data() ?? {};
       if (data['assignedTo'] != memberUid) {
@@ -378,9 +379,8 @@ class EventService {
       taskTitle = data['title'] as String? ?? taskTitle;
       final count = (data['extensionCount'] as num?)?.toInt() ?? 0;
       cost = count + 1;
-      final stars = (userSnap.data()?['stars'] as num?)?.toInt() ?? 0;
-      if (stars < cost) {
-        throw Exception('Not enough stars. Need $cost, you have $stars.');
+      if (balance < cost) {
+        throw Exception('Not enough stars. Need $cost, you have $balance.');
       }
 
       tx.update(taskRef, {
@@ -398,7 +398,6 @@ class EventService {
         'extensionReviewedAt': null,
         'extensionReviewNote': null,
       });
-      tx.update(userRef, {'stars': stars - cost});
     });
 
     final sender = _senderContext();

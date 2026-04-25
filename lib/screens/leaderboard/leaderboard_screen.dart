@@ -4,9 +4,16 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 
 import '../../core/auth_service.dart';
+import '../../core/stars_service.dart';
 import '../../core/theme.dart';
 import '../../models/app_user.dart';
 import '../../widgets/stream_error_view.dart';
+
+class _RankedMember {
+  final AppUser user;
+  final int stars;
+  const _RankedMember(this.user, this.stars);
+}
 
 class LeaderboardScreen extends StatelessWidget {
   const LeaderboardScreen({super.key});
@@ -14,17 +21,33 @@ class LeaderboardScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final meUid = context.watch<AuthService>().currentUser?.uid;
+
+    // Subscribe to active members only and decorate each with their live
+    // earned-stars count, then sort client-side. Stars no longer live on
+    // user docs, so we can't `orderBy('stars')` server-side.
     final stream = FirebaseFirestore.instance
         .collection('users')
-        .orderBy('stars', descending: true)
-        .limit(50)
-        .snapshots();
+        .where('active', isEqualTo: true)
+        .snapshots()
+        .asyncMap<List<_RankedMember>>((snap) async {
+      final users = snap.docs.map(AppUser.fromFirestore).toList();
+      final ranked = await Future.wait(users.map((u) async {
+        final stars = await StarsService.earnedFor(u.uid);
+        return _RankedMember(u, stars);
+      }));
+      ranked.sort((a, b) {
+        final byStars = b.stars.compareTo(a.stars);
+        if (byStars != 0) return byStars;
+        return a.user.name.toLowerCase().compareTo(b.user.name.toLowerCase());
+      });
+      return ranked;
+    });
 
     return Scaffold(
       appBar: AppBar(title: const Text('Leaderboard')),
       body: SafeArea(
         top: false,
-        child: StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
+        child: StreamBuilder<List<_RankedMember>>(
           stream: stream,
           builder: (_, snap) {
             if (snap.hasError) {
@@ -36,11 +59,10 @@ class LeaderboardScreen extends StatelessWidget {
             if (snap.connectionState == ConnectionState.waiting) {
               return const Center(child: CircularProgressIndicator());
             }
-            final users =
-                (snap.data?.docs ?? []).map(AppUser.fromFirestore).toList();
-            if (users.isEmpty) return const _EmptyState();
-            final top3 = users.take(3).toList();
-            final rest = users.skip(3).toList();
+            final ranked = snap.data ?? [];
+            if (ranked.isEmpty) return const _EmptyState();
+            final top3 = ranked.take(3).toList();
+            final rest = ranked.skip(3).toList();
 
             return ListView(
               padding: const EdgeInsets.fromLTRB(20, 8, 20, 40),
@@ -55,9 +77,9 @@ class LeaderboardScreen extends StatelessWidget {
                     Padding(
                       padding: const EdgeInsets.only(bottom: 10),
                       child: _LeaderRow(
-                        user: rest[i],
+                        entry: rest[i],
                         rank: i + 4,
-                        isMe: meUid != null && rest[i].uid == meUid,
+                        isMe: meUid != null && rest[i].user.uid == meUid,
                       ),
                     ),
                 ],
@@ -113,7 +135,7 @@ class LeaderboardScreen extends StatelessWidget {
 }
 
 class _Podium extends StatelessWidget {
-  final List<AppUser> top3;
+  final List<_RankedMember> top3;
   const _Podium({required this.top3});
 
   @override
@@ -126,9 +148,9 @@ class _Podium extends StatelessWidget {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.end,
         children: [
-          Expanded(child: _PodiumBar(user: second, place: 2, height: 100)),
-          Expanded(child: _PodiumBar(user: first, place: 1, height: 140)),
-          Expanded(child: _PodiumBar(user: third, place: 3, height: 80)),
+          Expanded(child: _PodiumBar(entry: second, place: 2, height: 100)),
+          Expanded(child: _PodiumBar(entry: first, place: 1, height: 140)),
+          Expanded(child: _PodiumBar(entry: third, place: 3, height: 80)),
         ],
       ),
     );
@@ -136,12 +158,12 @@ class _Podium extends StatelessWidget {
 }
 
 class _PodiumBar extends StatelessWidget {
-  final AppUser? user;
+  final _RankedMember? entry;
   final int place;
   final double height;
 
   const _PodiumBar({
-    required this.user,
+    required this.entry,
     required this.place,
     required this.height,
   });
@@ -159,6 +181,7 @@ class _PodiumBar extends StatelessWidget {
             ? AgaramColors.silverContainer
             : AgaramColors.bronzeContainer;
 
+    final user = entry?.user;
     return Column(
       mainAxisAlignment: MainAxisAlignment.end,
       children: [
@@ -173,9 +196,9 @@ class _PodiumBar extends StatelessWidget {
                   : null,
               child: user?.photoUrl == null
                   ? Text(
-                      user == null || user!.name.isEmpty
+                      user == null || user.name.isEmpty
                           ? '·'
-                          : user!.name[0].toUpperCase(),
+                          : user.name[0].toUpperCase(),
                       style: TextStyle(
                         color: Colors.white,
                         fontWeight: FontWeight.w700,
@@ -231,7 +254,7 @@ class _PodiumBar extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.end,
             children: [
               Text(
-                user?.stars.toString() ?? '—',
+                entry?.stars.toString() ?? '—',
                 style: GoogleFonts.inter(
                   fontSize: 22,
                   fontWeight: FontWeight.w700,
@@ -255,7 +278,7 @@ class _PodiumBar extends StatelessWidget {
         Text(
           user == null
               ? '—'
-              : (user!.name.isEmpty ? 'Member' : user!.name.split(' ').first),
+              : (user.name.isEmpty ? 'Member' : user.name.split(' ').first),
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
           style: GoogleFonts.inter(
@@ -270,18 +293,19 @@ class _PodiumBar extends StatelessWidget {
 }
 
 class _LeaderRow extends StatelessWidget {
-  final AppUser user;
+  final _RankedMember entry;
   final int rank;
   final bool isMe;
 
   const _LeaderRow({
-    required this.user,
+    required this.entry,
     required this.rank,
     required this.isMe,
   });
 
   @override
   Widget build(BuildContext context) {
+    final user = entry.user;
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
       decoration: BoxDecoration(
@@ -350,7 +374,7 @@ class _LeaderRow extends StatelessWidget {
             mainAxisSize: MainAxisSize.min,
             children: [
               Text(
-                user.stars.toString(),
+                entry.stars.toString(),
                 style: GoogleFonts.inter(
                   fontSize: 15,
                   fontWeight: FontWeight.w700,

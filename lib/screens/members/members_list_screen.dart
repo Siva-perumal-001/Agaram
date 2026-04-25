@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 
 import '../../core/auth_service.dart';
 import '../../core/members_service.dart';
+import '../../core/stars_service.dart';
 import '../../core/theme.dart';
 import '../../models/app_user.dart';
 import '../../widgets/role_chip.dart';
@@ -78,6 +79,7 @@ class _MembersListScreenState extends State<MembersListScreen> {
                         u.email.toLowerCase().contains(_query);
                   }).toList();
                   final totals = _totals(users);
+                  final takenPositions = _takenExclusivePositions(users);
                   return ListView(
                     padding: const EdgeInsets.fromLTRB(20, 0, 20, 120),
                     children: [
@@ -91,6 +93,7 @@ class _MembersListScreenState extends State<MembersListScreen> {
                           child: _MemberCard(
                             user: u,
                             viewerIsPresident: me?.isPresident ?? false,
+                            takenPositions: takenPositions,
                           ),
                         ),
                       if (visible.isEmpty)
@@ -129,6 +132,27 @@ class _MembersListScreenState extends State<MembersListScreen> {
         label: const Text('Add Member'),
       ),
     );
+  }
+
+  static const _exclusivePositions = {
+    AppPosition.secretary,
+    AppPosition.jointSecretary,
+    AppPosition.treasurer,
+    AppPosition.jointTreasurer,
+    AppPosition.vicePresident,
+    AppPosition.president,
+  };
+
+  Set<String> _takenExclusivePositions(List<AppUser> users) {
+    final taken = <String>{};
+    for (final u in users) {
+      if (!u.active) continue;
+      final pos = u.position;
+      if (pos != null && _exclusivePositions.contains(pos)) {
+        taken.add(pos);
+      }
+    }
+    return taken;
   }
 
   ({int members, int admins, int presidents, int inactive}) _totals(
@@ -220,7 +244,12 @@ class _MembersListScreenState extends State<MembersListScreen> {
 class _MemberCard extends StatelessWidget {
   final AppUser user;
   final bool viewerIsPresident;
-  const _MemberCard({required this.user, required this.viewerIsPresident});
+  final Set<String> takenPositions;
+  const _MemberCard({
+    required this.user,
+    required this.viewerIsPresident,
+    required this.takenPositions,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -271,24 +300,27 @@ class _MemberCard extends StatelessWidget {
                           ),
                         ),
                       ),
-                      Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          const Icon(
-                            Icons.star_rounded,
-                            size: 14,
-                            color: AgaramColors.secondary,
-                          ),
-                          const SizedBox(width: 4),
-                          Text(
-                            user.stars.toString(),
-                            style: GoogleFonts.inter(
-                              fontSize: 12,
-                              fontWeight: FontWeight.w700,
+                      LiveStarsBuilder(
+                        uid: user.uid,
+                        builder: (_, stars) => Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Icon(
+                              Icons.star_rounded,
+                              size: 14,
                               color: AgaramColors.secondary,
                             ),
-                          ),
-                        ],
+                            const SizedBox(width: 4),
+                            Text(
+                              stars.toString(),
+                              style: GoogleFonts.inter(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w700,
+                                color: AgaramColors.secondary,
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
                     ],
                   ),
@@ -433,12 +465,13 @@ class _MemberCard extends StatelessWidget {
                   _positionTile(null, 'None', selection,
                       (v) => setState(() => selection = v)),
                   for (final p in AppPosition.all)
-                    _positionTile(
-                      p,
-                      AppPosition.label(p),
-                      selection,
-                      (v) => setState(() => selection = v),
-                    ),
+                    if (p == user.position || !takenPositions.contains(p))
+                      _positionTile(
+                        p,
+                        AppPosition.label(p),
+                        selection,
+                        (v) => setState(() => selection = v),
+                      ),
                 ],
               ),
             ),

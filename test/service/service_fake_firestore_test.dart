@@ -13,6 +13,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:agaram/core/attendance_service.dart';
 import 'package:agaram/core/event_service.dart';
 import 'package:agaram/core/notifications_service.dart';
+import 'package:agaram/core/stars_service.dart';
 import 'package:agaram/core/wallet_service.dart';
 import 'package:agaram/models/app_notification.dart';
 import 'package:agaram/models/task.dart';
@@ -64,6 +65,7 @@ Future<FakeFirebaseFirestore> _freshDb({
   AttendanceService.database = db;
   WalletService.database = db;
   NotificationsService.database = db;
+  StarsService.database = db;
   return db;
 }
 
@@ -72,6 +74,7 @@ void _resetAll() {
   AttendanceService.resetDatabase();
   WalletService.resetDatabase();
   NotificationsService.resetDatabase();
+  StarsService.resetDatabase();
 }
 
 void main() {
@@ -182,7 +185,7 @@ void main() {
       );
     });
 
-    test('does NOT bump user.stars on member-side write (FND-02)', () async {
+    test('does NOT touch user.stars (stars are derived live)', () async {
       final db = await _freshDb();
       await AttendanceService.checkInWithQr(
         payload: AttendanceQrPayload(eventId: kEventId, secret: kQrSecret),
@@ -191,13 +194,16 @@ void main() {
       );
       final user = await db.collection('users').doc(kMember).get();
       expect(user.data()?['stars'], 0,
-          reason: 'Self-stars writes are blocked by FND-02; stars stay 0 '
-              'until admin reconciliation.');
+          reason: 'users.stars is no longer written; StarsService derives '
+              'earned stars from the attendance doc directly.');
+      expect(await StarsService.earnedFor(kMember), 2,
+          reason: 'attendance doc with starsAwarded=2 contributes +2 to '
+              'live earned-stars total.');
     });
   });
 
   group('AttendanceService.markManual', () {
-    test('admin path writes attendance + bumps user.stars by 2', () async {
+    test('admin path writes attendance only (stars derived live)', () async {
       final db = await _freshDb();
       await AttendanceService.markManual(
         eventId: kEventId,
@@ -210,7 +216,9 @@ void main() {
       expect(att.data()?['method'], 'manual');
       expect(att.data()?['starsAwarded'], 2);
       final user = await db.collection('users').doc(kMember).get();
-      expect(user.data()?['stars'], 2);
+      expect(user.data()?['stars'], 0,
+          reason: 'users.stars is no longer written; live derivation only.');
+      expect(await StarsService.earnedFor(kMember), 2);
     });
 
     test('rejects if member user doc missing', () async {
@@ -304,9 +312,7 @@ void main() {
     Future<String> seedTask(
       FakeFirebaseFirestore db, {
       String status = 'submitted',
-      int currentStars = 0,
     }) async {
-      await db.collection('users').doc(kMember).update({'stars': currentStars});
       final ref = await db
           .collection('events').doc(kEventId)
           .collection('tasks').add({
@@ -319,9 +325,9 @@ void main() {
       return ref.id;
     }
 
-    test('approval flips status + bumps user.stars by 3', () async {
+    test('approval flips status; live earned grows by 3', () async {
       final db = await _freshDb();
-      final taskId = await seedTask(db, currentStars: 4);
+      final taskId = await seedTask(db);
       await EventService.approveTask(
         eventId: kEventId,
         taskId: taskId,
@@ -337,13 +343,15 @@ void main() {
       expect(task.data()?['reviewedBy'], kAdmin);
 
       final user = await db.collection('users').doc(kMember).get();
-      expect(user.data()?['stars'], 7);
+      expect(user.data()?['stars'], 0,
+          reason: 'users.stars is no longer written; live derivation only.');
+      expect(await StarsService.earnedFor(kMember), 3);
     });
 
     test('is idempotent — re-approving already-approved task does nothing',
         () async {
       final db = await _freshDb();
-      final taskId = await seedTask(db, status: 'approved', currentStars: 10);
+      final taskId = await seedTask(db, status: 'approved');
       await EventService.approveTask(
         eventId: kEventId,
         taskId: taskId,
@@ -351,9 +359,19 @@ void main() {
         memberUid: kMember,
         reviewNote: 'retry',
       );
-      final user = await db.collection('users').doc(kMember).get();
-      expect(user.data()?['stars'], 10,
-          reason: 'idempotent guard at event_service.dart:151 prevents double-award');
+      // The task was already approved at seed time, so the live earned
+      // count is +3 even before approveTask was called. The point of this
+      // test is that approveTask doesn't double-award (e.g. by re-running
+      // side effects). Since stars are derived live, the only way to "double
+      // award" would be to mutate the task state — and the idempotent guard
+      // prevents that.
+      final task = await db
+          .collection('events').doc(kEventId)
+          .collection('tasks').doc(taskId).get();
+      expect(task.data()?['starsAwarded'], 0,
+          reason: 'idempotent guard at event_service.dart prevents the '
+              'starsAwarded field from being overwritten.');
+      expect(await StarsService.earnedFor(kMember), 3);
     });
 
     test('throws when task does not exist', () async {
@@ -371,9 +389,9 @@ void main() {
   });
 
   group('EventService.rejectTask (FND-14 transactional)', () {
-    test('flips to rejected + starsAwarded=0, no stars change', () async {
+    test('flips to rejected + starsAwarded=0, no earned-stars change',
+        () async {
       final db = await _freshDb();
-      await db.collection('users').doc(kMember).update({'stars': 5});
       final taskRef = await db
           .collection('events').doc(kEventId)
           .collection('tasks').add({
@@ -396,8 +414,8 @@ void main() {
       expect(task.data()?['reviewedBy'], kAdmin);
       expect(task.data()?['starsAwarded'], 0);
 
-      final user = await db.collection('users').doc(kMember).get();
-      expect(user.data()?['stars'], 5, reason: 'reject does not award stars');
+      expect(await StarsService.earnedFor(kMember), 0,
+          reason: 'reject does not contribute to live earned-stars total');
     });
 
     test('throws when task missing', () async {

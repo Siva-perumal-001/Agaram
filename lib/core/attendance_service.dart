@@ -120,10 +120,8 @@ class AttendanceService {
         'starsAwarded': AppConfig.starsPerAttendance,
         'qrSecretUsed': payload.secret,
       });
-      // Member clients cannot write their own `stars` under the tightened
-      // self-update rule. Attendance stars live on the attendance doc
-      // (`starsAwarded: 2`); admin-side reconciliation writes them into
-      // `user.stars` via the admin branch of the user-update rule.
+      // Stars are derived live from this attendance doc by StarsService.
+      // No write to users.stars is needed.
     });
   }
 
@@ -153,7 +151,6 @@ class AttendanceService {
       if (existing.exists) {
         throw AttendanceException('Already marked present.');
       }
-      final currentStars = (userSnap.data()?['stars'] as num?)?.toInt() ?? 0;
 
       tx.set(attendanceRef, {
         'userId': memberUid,
@@ -162,9 +159,7 @@ class AttendanceService {
         'method': 'manual',
         'starsAwarded': AppConfig.starsPerAttendance,
       });
-      tx.update(userRef, {
-        'stars': currentStars + AppConfig.starsPerAttendance,
-      });
+      // Stars are derived live; no write to users.stars.
     });
   }
 }
