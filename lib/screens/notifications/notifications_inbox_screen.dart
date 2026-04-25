@@ -7,8 +7,11 @@ import '../../core/auth_service.dart';
 import '../../core/notifications_service.dart';
 import '../../core/theme.dart';
 import '../../models/app_notification.dart';
+import '../../models/task.dart';
 import '../../widgets/notification_card.dart';
 import '../../widgets/stream_error_view.dart';
+import '../events/event_detail_screen.dart';
+import '../tasks/task_detail_screen.dart';
 import 'compose_notification_screen.dart';
 
 enum _Filter { all, events, tasks, announcements }
@@ -149,12 +152,80 @@ class _NotificationsInboxScreenState extends State<NotificationsInboxScreen> {
                 final n = items[i];
                 final unread = lastRead == null ||
                     (n.sentAt != null && n.sentAt!.isAfter(lastRead));
-                return NotificationCard(notif: n, unread: unread);
+                return NotificationCard(
+                  notif: n,
+                  unread: unread,
+                  onTap: () => _openNotification(n),
+                );
               },
             );
           },
         );
       },
+    );
+  }
+
+  Future<void> _openNotification(AppNotification n) async {
+    final nav = Navigator.of(context);
+    final messenger = ScaffoldMessenger.of(context);
+
+    if (n.kind == AppNotificationKind.task &&
+        n.eventId != null &&
+        n.eventId!.isNotEmpty &&
+        n.taskId != null &&
+        n.taskId!.isNotEmpty) {
+      try {
+        final snap = await FirebaseFirestore.instance
+            .collection('events')
+            .doc(n.eventId)
+            .collection('tasks')
+            .doc(n.taskId)
+            .get();
+        if (!snap.exists) {
+          messenger.showSnackBar(
+            const SnackBar(content: Text('Task no longer available.')),
+          );
+          return;
+        }
+        final task = AgaramTask.fromFirestore(snap);
+        await nav.push(
+          MaterialPageRoute(builder: (_) => TaskDetailScreen(task: task)),
+        );
+      } catch (_) {
+        messenger.showSnackBar(
+          const SnackBar(content: Text("Couldn't open task.")),
+        );
+      }
+      return;
+    }
+
+    if (n.kind == AppNotificationKind.event &&
+        n.eventId != null &&
+        n.eventId!.isNotEmpty) {
+      await nav.push(
+        MaterialPageRoute(
+          builder: (_) => EventDetailScreen(eventId: n.eventId!),
+        ),
+      );
+      return;
+    }
+
+    _showAnnouncementDialog(n);
+  }
+
+  void _showAnnouncementDialog(AppNotification n) {
+    showDialog<void>(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: Text(n.title),
+        content: SingleChildScrollView(child: Text(n.body)),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Close'),
+          ),
+        ],
+      ),
     );
   }
 
