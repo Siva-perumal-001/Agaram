@@ -17,7 +17,8 @@ import '../leaderboard/leaderboard_screen.dart';
 import '../notifications/notifications_inbox_screen.dart';
 
 class MemberHomeScreen extends StatefulWidget {
-  const MemberHomeScreen({super.key});
+  final void Function(int tabIndex)? onSwitchTab;
+  const MemberHomeScreen({super.key, this.onSwitchTab});
 
   @override
   State<MemberHomeScreen> createState() => _MemberHomeScreenState();
@@ -67,7 +68,7 @@ class _MemberHomeScreenState extends State<MemberHomeScreen> {
                     ),
                   ),
                   TextButton(
-                    onPressed: () {}, // Wired in Phase 3 via bottom-nav
+                    onPressed: () => widget.onSwitchTab?.call(1),
                     child: const Text('See all'),
                   ),
                 ],

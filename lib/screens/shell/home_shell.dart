@@ -32,7 +32,7 @@ class _HomeShellState extends State<HomeShell> {
     final pages = <Widget>[
       isAdmin
           ? AdminDashboardScreen(onSwitchTab: switchTab)
-          : const MemberHomeScreen(),
+          : MemberHomeScreen(onSwitchTab: switchTab),
       const EventsListScreen(),
       const TasksTabScreen(),
       const WalletScreen(),
