@@ -613,7 +613,7 @@ void main() {
 
     test('returns 0 when no notifications', () async {
       await _freshDb();
-      final count = await NotificationsService.unreadCount(kMember).first;
+      final count = await NotificationsService.unreadCount(kMember, isAdmin: false).first;
       expect(count, 0);
     });
 
@@ -624,7 +624,7 @@ void main() {
         DateTime(2026, 4, 5),
         DateTime(2026, 4, 10),
       ]);
-      final count = await NotificationsService.unreadCount(kMember).first;
+      final count = await NotificationsService.unreadCount(kMember, isAdmin: false).first;
       expect(count, 3);
     });
 
@@ -639,7 +639,7 @@ void main() {
         DateTime(2026, 4, 6), // after
         DateTime(2026, 4, 10), // after
       ]);
-      final count = await NotificationsService.unreadCount(kMember).first;
+      final count = await NotificationsService.unreadCount(kMember, isAdmin: false).first;
       expect(count, 2);
     });
 
@@ -648,9 +648,9 @@ void main() {
       final now = DateTime(2026, 4, 1);
       await seedNotifs(
           db, List.generate(75, (i) => now.add(Duration(minutes: i))));
-      final count = await NotificationsService.unreadCount(kMember).first;
+      final count = await NotificationsService.unreadCount(kMember, isAdmin: false).first;
       expect(count, 75,
-          reason: '.count() aggregate is not bounded by limit(50).');
+          reason: 'fetch-and-filter capped at limit(100); 75 items must all count.');
     });
   });
 }
