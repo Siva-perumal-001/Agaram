@@ -135,12 +135,6 @@ class _WalletEventScreenState extends State<WalletEventScreen> {
           color: Colors.white,
         ),
       ),
-      actions: const [
-        IconButton(
-          icon: Icon(Icons.share_rounded, color: Colors.white),
-          onPressed: null,
-        ),
-      ],
       flexibleSpace: FlexibleSpaceBar(
         background: Stack(
           fit: StackFit.expand,

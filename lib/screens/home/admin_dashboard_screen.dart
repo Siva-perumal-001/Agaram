@@ -8,7 +8,6 @@ import '../../core/auth_service.dart';
 import '../../core/notifications_service.dart';
 import '../../core/theme.dart';
 import '../../models/app_user.dart';
-import '../../widgets/activity_item.dart';
 import '../../widgets/agaram_logo.dart';
 import '../../widgets/quick_action_card.dart';
 import '../../widgets/stat_tile.dart';
@@ -66,16 +65,9 @@ class AdminDashboardScreen extends StatelessWidget {
                 ],
               ),
               const SizedBox(height: 24),
-              Row(
-                children: [
-                  Expanded(
-                    child: Text(
-                      'Recent Activity',
-                      style: Theme.of(context).textTheme.titleLarge,
-                    ),
-                  ),
-                  TextButton(onPressed: () {}, child: const Text('View All')),
-                ],
+              Text(
+                'Recent Activity',
+                style: Theme.of(context).textTheme.titleLarge,
               ),
               const SizedBox(height: 4),
               _RecentActivityCard(),
@@ -380,23 +372,52 @@ class _RecentActivityCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
       decoration: BoxDecoration(
         color: AgaramColors.surfaceContainerLowest,
         borderRadius: BorderRadius.circular(20),
       ),
-      child: Column(
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          const SizedBox(height: 4),
-          const ActivityItem(
-            icon: Icons.auto_stories_rounded,
-            iconBg: AgaramColors.secondaryContainer,
-            iconColor: AgaramColors.secondary,
-            actorName: 'No activity yet',
-            actionText: '— member submissions and joins will appear here.',
-            timeAgo: 'Phase 3 onwards',
+          Container(
+            height: 40,
+            width: 40,
+            decoration: const BoxDecoration(
+              color: AgaramColors.secondaryContainer,
+              shape: BoxShape.circle,
+            ),
+            child: const Icon(
+              Icons.auto_stories_rounded,
+              color: AgaramColors.secondary,
+              size: 20,
+            ),
           ),
-          const SizedBox(height: 4),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Nothing to show yet',
+                  style: GoogleFonts.inter(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w700,
+                    color: AgaramColors.onSurface,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  'Member submissions and new joins will appear here.',
+                  style: GoogleFonts.inter(
+                    fontSize: 12,
+                    color: AgaramColors.onSurfaceVariant,
+                    height: 1.4,
+                  ),
+                ),
+              ],
+            ),
+          ),
         ],
       ),
     );
