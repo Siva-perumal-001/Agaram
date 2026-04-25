@@ -20,6 +20,29 @@ class CloudinaryService {
     cache: false,
   );
 
+  /// Stable, human-readable folder name for an event. Slugifies the title
+  /// (lowercase ASCII + hyphens) and appends a short eventId suffix so two
+  /// events with the same title don't share a folder.
+  ///
+  /// Examples:
+  ///   ('evt_abc123def', 'Diwali Night 2026!') -> 'diwali-night-2026-evt_ab'
+  ///   ('evt_abc123def', 'பொங்கல் விழா')        -> 'event-evt_ab'
+  static String eventFolder({
+    required String eventId,
+    required String eventTitle,
+  }) {
+    final slug = eventTitle
+        .toLowerCase()
+        .replaceAll(RegExp(r'[^a-z0-9\s-]'), '')
+        .replaceAll(RegExp(r'\s+'), '-')
+        .replaceAll(RegExp(r'-+'), '-')
+        .replaceAll(RegExp(r'^-+|-+$'), '');
+    final shortId =
+        eventId.length > 8 ? eventId.substring(0, 8) : eventId;
+    if (slug.isEmpty) return 'event-$shortId';
+    return '$slug-$shortId';
+  }
+
   static Future<String> uploadEventBanner(File file) {
     return _upload(
       file,
@@ -34,10 +57,12 @@ class CloudinaryService {
     File file, {
     required ProofKind kind,
     required String eventId,
+    required String eventTitle,
   }) {
+    final folder = eventFolder(eventId: eventId, eventTitle: eventTitle);
     return _upload(
       file,
-      folder: '${AppConfig.cloudinaryFolderRoot}/proofs/events/$eventId',
+      folder: '${AppConfig.cloudinaryFolderRoot}/$folder/proofs',
       resourceType: kind == ProofKind.image
           ? CloudinaryResourceType.Image
           : CloudinaryResourceType.Auto,
@@ -60,10 +85,12 @@ class CloudinaryService {
     File file, {
     required bool isPdf,
     required String eventId,
+    required String eventTitle,
   }) {
+    final folder = eventFolder(eventId: eventId, eventTitle: eventTitle);
     return _upload(
       file,
-      folder: '${AppConfig.cloudinaryFolderRoot}/wallet/events/$eventId',
+      folder: '${AppConfig.cloudinaryFolderRoot}/$folder/wallet',
       resourceType:
           isPdf ? CloudinaryResourceType.Auto : CloudinaryResourceType.Image,
       maxSizeMb: AppConfig.maxWalletFileSizeMb,
@@ -74,10 +101,12 @@ class CloudinaryService {
   static Future<String> uploadGalleryPhoto(
     File file, {
     required String eventId,
+    required String eventTitle,
   }) {
+    final folder = eventFolder(eventId: eventId, eventTitle: eventTitle);
     return _upload(
       file,
-      folder: '${AppConfig.cloudinaryFolderRoot}/gallery/events/$eventId',
+      folder: '${AppConfig.cloudinaryFolderRoot}/$folder/gallery',
       resourceType: CloudinaryResourceType.Image,
       maxSizeMb: AppConfig.maxGalleryFileSizeMb,
       kindLabel: 'photo',

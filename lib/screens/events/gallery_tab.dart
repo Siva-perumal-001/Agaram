@@ -15,7 +15,12 @@ import '../gallery/photo_lightbox_screen.dart';
 
 class GalleryTab extends StatelessWidget {
   final String eventId;
-  const GalleryTab({super.key, required this.eventId});
+  final String eventTitle;
+  const GalleryTab({
+    super.key,
+    required this.eventId,
+    required this.eventTitle,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -122,13 +127,11 @@ class GalleryTab extends StatelessWidget {
   }
 
   Future<void> _pickAndUpload(BuildContext context) async {
-    final picker = ImagePicker();
-    final picked = await picker.pickImage(
-      source: ImageSource.gallery,
+    final picked = await ImagePicker().pickMultiImage(
       maxWidth: 2000,
       imageQuality: 82,
     );
-    if (picked == null) return;
+    if (picked.isEmpty) return;
     if (!context.mounted) return;
 
     final captionCtrl = TextEditingController();
@@ -147,25 +150,47 @@ class GalleryTab extends StatelessWidget {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              AspectRatio(
-                aspectRatio: 4 / 3,
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(16),
-                  child: Image.file(File(picked.path), fit: BoxFit.cover),
+              if (picked.length == 1)
+                AspectRatio(
+                  aspectRatio: 4 / 3,
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(16),
+                    child: Image.file(
+                      File(picked.first.path),
+                      fit: BoxFit.cover,
+                    ),
+                  ),
+                )
+              else
+                _MultiPickedPreview(picked: picked),
+              const SizedBox(height: 14),
+              if (picked.length > 1)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 10),
+                  child: Text(
+                    '${picked.length} photos selected',
+                    style: GoogleFonts.inter(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                      color: AgaramColors.primary,
+                    ),
+                  ),
                 ),
-              ),
-              const SizedBox(height: 16),
               TextField(
                 controller: captionCtrl,
                 maxLines: 2,
-                decoration: const InputDecoration(
-                  hintText: 'Caption (optional)',
+                decoration: InputDecoration(
+                  hintText: picked.length > 1
+                      ? 'Shared caption (optional)'
+                      : 'Caption (optional)',
                 ),
               ),
               const SizedBox(height: 16),
               FilledButton(
                 onPressed: () => Navigator.of(sheetCtx).pop(true),
-                child: const Text('Upload'),
+                child: Text(
+                  picked.length > 1 ? 'Upload ${picked.length}' : 'Upload',
+                ),
               ),
             ],
           ),
@@ -179,29 +204,107 @@ class GalleryTab extends StatelessWidget {
     final user = context.read<AuthService>().currentUser;
     if (user == null) return;
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Uploading photo…')),
+    final caption = captionCtrl.text.trim().isEmpty
+        ? null
+        : captionCtrl.text.trim();
+    final uploaderName = user.name.isEmpty ? user.email : user.name;
+    final messenger = ScaffoldMessenger.of(context);
+    messenger.showSnackBar(
+      SnackBar(
+        content: Text(
+          picked.length == 1
+              ? 'Uploading photo…'
+              : 'Uploading ${picked.length} photos…',
+        ),
+        duration: const Duration(seconds: 30),
+      ),
     );
-    try {
-      await GalleryService.addPhoto(
-        eventId: eventId,
-        file: File(picked.path),
-        uploadedBy: user.uid,
-        uploadedByName: user.name.isEmpty ? user.email : user.name,
-        caption: captionCtrl.text.trim().isEmpty
-            ? null
-            : captionCtrl.text.trim(),
+
+    var succeeded = 0;
+    final failed = <String>[];
+    for (final p in picked) {
+      try {
+        await GalleryService.addPhoto(
+          eventId: eventId,
+          eventTitle: eventTitle,
+          file: File(p.path),
+          uploadedBy: user.uid,
+          uploadedByName: uploaderName,
+          caption: caption,
+        );
+        succeeded++;
+      } catch (_) {
+        failed.add(p.name);
+      }
+    }
+    if (!context.mounted) return;
+    messenger.hideCurrentSnackBar();
+    if (failed.isEmpty) {
+      messenger.showSnackBar(
+        SnackBar(
+          content: Text(
+            succeeded == 1
+                ? 'Added to gallery ✓'
+                : '$succeeded photos added to gallery ✓',
+          ),
+        ),
       );
-      if (!context.mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Added to gallery ✓')),
-      );
-    } catch (e) {
-      if (!context.mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Upload failed: $e')),
+    } else {
+      messenger.showSnackBar(
+        SnackBar(
+          content: Text(
+            succeeded == 0
+                ? 'Upload failed for all ${failed.length} photos.'
+                : '$succeeded uploaded · ${failed.length} failed',
+          ),
+        ),
       );
     }
+  }
+}
+
+class _MultiPickedPreview extends StatelessWidget {
+  final List<XFile> picked;
+  const _MultiPickedPreview({required this.picked});
+
+  @override
+  Widget build(BuildContext context) {
+    final shown = picked.take(4).toList();
+    final extra = picked.length - shown.length;
+    return SizedBox(
+      height: 120,
+      child: Row(
+        children: [
+          for (var i = 0; i < shown.length; i++) ...[
+            Expanded(
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(12),
+                child: Stack(
+                  fit: StackFit.expand,
+                  children: [
+                    Image.file(File(shown[i].path), fit: BoxFit.cover),
+                    if (i == shown.length - 1 && extra > 0)
+                      Container(
+                        color: Colors.black54,
+                        alignment: Alignment.center,
+                        child: Text(
+                          '+$extra',
+                          style: GoogleFonts.inter(
+                            color: Colors.white,
+                            fontSize: 22,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+            ),
+            if (i != shown.length - 1) const SizedBox(width: 6),
+          ],
+        ],
+      ),
+    );
   }
 }
 

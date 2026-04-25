@@ -38,6 +38,7 @@ class WalletService {
       file,
       isPdf: type == WalletDocType.pdf,
       eventId: eventId,
+      eventTitle: eventTitle,
     );
     final fileName = file.path.split(Platform.pathSeparator).last;
     final bytes = await file.length();

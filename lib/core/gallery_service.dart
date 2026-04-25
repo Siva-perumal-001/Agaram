@@ -11,12 +11,17 @@ class GalleryService {
 
   static Future<void> addPhoto({
     required String eventId,
+    required String eventTitle,
     required File file,
     required String uploadedBy,
     required String uploadedByName,
     String? caption,
   }) async {
-    final url = await CloudinaryService.uploadGalleryPhoto(file, eventId: eventId);
+    final url = await CloudinaryService.uploadGalleryPhoto(
+      file,
+      eventId: eventId,
+      eventTitle: eventTitle,
+    );
     await gallery(eventId).add({
       'url': url,
       'uploadedBy': uploadedBy,

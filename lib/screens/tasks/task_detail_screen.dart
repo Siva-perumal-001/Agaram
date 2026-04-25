@@ -11,6 +11,7 @@ import '../../core/app_config.dart';
 import '../../core/auth_service.dart';
 import '../../core/cloudinary_service.dart';
 import '../../core/event_service.dart';
+import '../../core/stars_service.dart';
 import '../../core/theme.dart';
 import '../../models/task.dart';
 import '../../widgets/proof_preview.dart';
@@ -103,6 +104,7 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
         _localFile!,
         kind: kind,
         eventId: widget.task.eventId,
+        eventTitle: widget.task.eventTitle,
       );
       if (!mounted) return;
       setState(() => _uploadProgress = 0.85);
@@ -188,11 +190,7 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
   }
 
   Widget _extensionBanner(AgaramTask task) {
-    final cost = task.nextExtensionCost;
-    final stars = context.watch<AuthService>().currentUser?.stars ?? 0;
-    final canAfford = stars >= cost;
-
-    // State 1: pending review
+    // State 1: pending review — affordability not relevant.
     if (task.extensionStatus == ExtensionStatus.pending) {
       return _bannerBox(
         bg: AgaramColors.warningContainer,
@@ -204,6 +202,19 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
             'Waiting for admin review. Cost: −${task.extensionStarCost} star(s).',
       );
     }
+
+    final uid = context.watch<AuthService>().currentUser?.uid;
+    if (uid == null) return const SizedBox.shrink();
+
+    return LiveBalanceBuilder(
+      uid: uid,
+      builder: (_, stars) => _pastDueExtensionBanner(task, stars),
+    );
+  }
+
+  Widget _pastDueExtensionBanner(AgaramTask task, int stars) {
+    final cost = task.nextExtensionCost;
+    final canAfford = stars >= cost;
 
     // State 2: approved but still expired (window passed)
     // State 3: denied
