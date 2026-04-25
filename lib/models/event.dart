@@ -16,6 +16,20 @@ EventStatus _parseStatus(String? raw) {
 
 String eventStatusToString(EventStatus s) => s.name;
 
+/// Derived status from a date + duration, ignoring whatever value is stored
+/// in the `status` field. The stored field is unreliable because the app has
+/// no scheduled job to advance it past `'upcoming'`.
+EventStatus effectiveEventStatus({
+  required DateTime date,
+  required int durationMinutes,
+  required DateTime now,
+}) {
+  final end = date.add(Duration(minutes: durationMinutes));
+  if (now.isBefore(date)) return EventStatus.upcoming;
+  if (now.isAfter(end)) return EventStatus.done;
+  return EventStatus.ongoing;
+}
+
 class AgaramEvent {
   final String id;
   final String title;
@@ -35,6 +49,15 @@ class AgaramEvent {
   /// after the session ends. Defaults to 120 minutes when unset.
   final int durationMinutes;
 
+  /// Set the first time an admin archives this event's wallet docs to
+  /// Google Drive. Drives the in-app banner and stops the local "archive
+  /// reminder" notification from re-firing.
+  final DateTime? lastArchivedAt;
+
+  /// Number of wallet docs (pdfs + images) attached to this event,
+  /// derived from the `walletCounts` map maintained by [WalletService].
+  final int walletDocsCount;
+
   const AgaramEvent({
     required this.id,
     required this.title,
@@ -47,6 +70,8 @@ class AgaramEvent {
     this.bannerUrl,
     this.kind = 'event',
     this.durationMinutes = 120,
+    this.lastArchivedAt,
+    this.walletDocsCount = 0,
   });
 
   bool get isMeeting => kind == 'meeting';
@@ -63,6 +88,12 @@ class AgaramEvent {
       !now.isBefore(attendanceWindowOpensAt) &&
       !now.isAfter(attendanceWindowClosesAt);
 
+  EventStatus effectiveStatus(DateTime now) => effectiveEventStatus(
+        date: date,
+        durationMinutes: durationMinutes,
+        now: now,
+      );
+
   factory AgaramEvent.fromFirestore(DocumentSnapshot<Map<String, dynamic>> doc) {
     final data = doc.data() ?? {};
     return AgaramEvent(
@@ -77,7 +108,17 @@ class AgaramEvent {
       bannerUrl: data['bannerUrl'] as String?,
       kind: data['kind'] as String? ?? 'event',
       durationMinutes: (data['durationMinutes'] as num?)?.toInt() ?? 120,
+      lastArchivedAt: (data['lastArchivedAt'] as Timestamp?)?.toDate(),
+      walletDocsCount: _walletDocsCountFrom(data),
     );
+  }
+
+  static int _walletDocsCountFrom(Map<String, dynamic> data) {
+    final counts = data['walletCounts'] as Map<String, dynamic>?;
+    if (counts == null) return 0;
+    final pdfs = (counts['pdfs'] as num?)?.toInt() ?? 0;
+    final images = (counts['images'] as num?)?.toInt() ?? 0;
+    return pdfs + images;
   }
 
   Map<String, dynamic> toFirestore() {

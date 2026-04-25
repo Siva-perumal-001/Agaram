@@ -54,6 +54,9 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       _EventInfoCard(event: event),
+                      if (isAdmin) ...[
+                        _ArchiveBanner(event: event),
+                      ],
                       if (event.description.isNotEmpty) ...[
                         const SizedBox(height: 24),
                         _about(event),
@@ -152,7 +155,10 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
         return SliverToBoxAdapter(
           child: Padding(
             padding: const EdgeInsets.fromLTRB(20, 4, 20, 0),
-            child: GalleryTab(eventId: widget.eventId),
+            child: GalleryTab(
+              eventId: widget.eventId,
+              eventTitle: event.title,
+            ),
           ),
         );
     }
@@ -466,6 +472,120 @@ class _EmptyTasks extends StatelessWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _ArchiveBanner extends StatelessWidget {
+  final AgaramEvent event;
+  const _ArchiveBanner({required this.event});
+
+  @override
+  Widget build(BuildContext context) {
+    final now = DateTime.now();
+    final ended = event.effectiveStatus(now) == EventStatus.done;
+    final hasDocs = event.walletDocsCount > 0;
+    final archived = event.lastArchivedAt != null;
+
+    if (!ended || !hasDocs) return const SizedBox.shrink();
+
+    if (archived) {
+      final when = DateFormat('MMM d').format(event.lastArchivedAt!);
+      return Padding(
+        padding: const EdgeInsets.only(top: 16),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+          decoration: BoxDecoration(
+            color: AgaramColors.successContainer,
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Row(
+            children: [
+              const Icon(
+                Icons.cloud_done_rounded,
+                size: 18,
+                color: AgaramColors.success,
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  'Archived to Drive on $when',
+                  style: GoogleFonts.inter(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                    color: AgaramColors.successDark,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    final count = event.walletDocsCount;
+    return Padding(
+      padding: const EdgeInsets.only(top: 16),
+      child: InkWell(
+        onTap: () => showModalBottomSheet(
+          context: context,
+          isScrollControlled: true,
+          showDragHandle: true,
+          backgroundColor: AgaramColors.surface,
+          shape: const RoundedRectangleBorder(
+            borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+          ),
+          builder: (_) => DriveArchiveSheet(event: event),
+        ),
+        borderRadius: BorderRadius.circular(14),
+        child: Container(
+          padding: const EdgeInsets.all(14),
+          decoration: BoxDecoration(
+            color: AgaramColors.secondaryContainer.withValues(alpha: 0.45),
+            borderRadius: BorderRadius.circular(14),
+            border: const Border(
+              left: BorderSide(color: AgaramColors.secondary, width: 3),
+            ),
+          ),
+          child: Row(
+            children: [
+              const Icon(
+                Icons.cloud_upload_rounded,
+                color: AgaramColors.secondary,
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Archive to Drive',
+                      style: GoogleFonts.inter(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w700,
+                        color: AgaramColors.onSurface,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      '$count ${count == 1 ? 'file' : 'files'} waiting · tap to back up',
+                      style: GoogleFonts.inter(
+                        fontSize: 12,
+                        color: AgaramColors.onSurfaceVariant,
+                        height: 1.3,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const Icon(
+                Icons.chevron_right_rounded,
+                color: AgaramColors.onSurfaceVariant,
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }

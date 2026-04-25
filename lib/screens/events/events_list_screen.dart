@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 
 import '../../core/auth_service.dart';
 import '../../core/theme.dart';
+import '../../models/event.dart';
 import '../../widgets/event_preview_card.dart';
 import '../../widgets/stream_error_view.dart';
 import 'event_detail_screen.dart';
@@ -159,15 +160,14 @@ class _EventsListScreenState extends State<EventsListScreen> {
   }
 
   Widget _list() {
-    final statusFilter = switch (_tab) {
-      _Tab.upcoming => ['upcoming'],
-      _Tab.ongoing => ['ongoing'],
-      _Tab.past => ['done'],
+    final wantStatus = switch (_tab) {
+      _Tab.upcoming => EventStatus.upcoming,
+      _Tab.ongoing => EventStatus.ongoing,
+      _Tab.past => EventStatus.done,
     };
     final stream = FirebaseFirestore.instance
         .collection('events')
-        .where('status', whereIn: statusFilter)
-        .orderBy('date', descending: _tab == _Tab.past)
+        .orderBy('date')
         .snapshots();
     return StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
       stream: stream,
@@ -182,8 +182,19 @@ class _EventsListScreenState extends State<EventsListScreen> {
         if (snap.connectionState == ConnectionState.waiting) {
           return const Center(child: CircularProgressIndicator());
         }
-        final docs = (snap.data?.docs ?? []).where((d) {
-          final kind = d.data()['kind'] as String? ?? 'event';
+        final now = DateTime.now();
+        var docs = (snap.data?.docs ?? []).where((d) {
+          final data = d.data();
+          final ts = data['date'];
+          final date = ts is Timestamp ? ts.toDate() : DateTime.now();
+          final duration = (data['durationMinutes'] as num?)?.toInt() ?? 120;
+          final effective = effectiveEventStatus(
+            date: date,
+            durationMinutes: duration,
+            now: now,
+          );
+          if (effective != wantStatus) return false;
+          final kind = data['kind'] as String? ?? 'event';
           switch (_kind) {
             case _KindFilter.all:
               return true;
@@ -193,6 +204,7 @@ class _EventsListScreenState extends State<EventsListScreen> {
               return kind == 'meeting';
           }
         }).toList();
+        if (_tab == _Tab.past) docs = docs.reversed.toList();
         if (docs.isEmpty) return const _EmptyState();
         return ListView.separated(
           padding: const EdgeInsets.fromLTRB(20, 0, 20, 120),

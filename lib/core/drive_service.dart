@@ -1,3 +1,4 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:googleapis/drive/v3.dart' as drive;
 import 'package:http/http.dart' as http;
@@ -117,6 +118,18 @@ class DriveService {
         total: total,
         failed: failed,
       ));
+
+      if (uploaded > 0) {
+        try {
+          await FirebaseFirestore.instance
+              .collection('events')
+              .doc(eventId)
+              .update({'lastArchivedAt': FieldValue.serverTimestamp()});
+        } catch (_) {
+          // Stamp is best-effort — the upload already succeeded; the next
+          // archive run will retry the stamp.
+        }
+      }
 
       return DriveArchiveResult(
         folderId: folderId,

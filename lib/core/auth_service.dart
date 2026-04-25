@@ -66,7 +66,9 @@ class AuthService extends ChangeNotifier {
         await FcmService.subscribeForMember(firebaseUser.uid);
       }
       // Refresh local event reminders for the freshly signed-in member.
-      unawaited(ReminderService.syncUpcoming());
+      unawaited(ReminderService.syncUpcoming(
+        isPresident: _currentUser?.isPresident ?? false,
+      ));
       _watchActiveFlag(firebaseUser.uid);
     } catch (e) {
       await _auth.signOut();

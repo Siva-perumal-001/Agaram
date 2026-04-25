@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 
+import 'core/auth_service.dart';
 import 'core/nav.dart';
 import 'core/reminder_service.dart';
 import 'core/routes.dart';
@@ -34,7 +36,10 @@ class _AgaramAppState extends State<AgaramApp> with WidgetsBindingObserver {
     if (state == AppLifecycleState.resumed) {
       // Re-sync local reminders after the app comes back to the foreground
       // in case the event list changed while we were away.
-      ReminderService.syncUpcoming();
+      final auth = context.read<AuthService>();
+      ReminderService.syncUpcoming(
+        isPresident: auth.currentUser?.isPresident ?? false,
+      );
     }
   }
 
